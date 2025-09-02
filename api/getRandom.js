@@ -12,16 +12,19 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: "Missing collectionId" });
   }
 
-  // Fetch bookmarks from given collection
+  // Fetch bookmarks from given collection (0 = all collections)
   let page = 0;
   const perpage = 100;
   let all = [];
 
   while (true) {
-    const resp = await fetch(
-      `https://api.raindrop.io/rest/v1/raindrops/${collectionId}?perpage=${perpage}&page=${page}`,
-      { headers: { Authorization: `Bearer ${token}` } }
-    );
+    const endpoint = collectionId === "0" 
+      ? `https://api.raindrop.io/rest/v1/raindrops/0?perpage=${perpage}&page=${page}`
+      : `https://api.raindrop.io/rest/v1/raindrops/${collectionId}?perpage=${perpage}&page=${page}`;
+      
+    const resp = await fetch(endpoint, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
     
     if (!resp.ok) {
       return res.status(500).json({ error: "Failed to fetch bookmarks from collection" });
