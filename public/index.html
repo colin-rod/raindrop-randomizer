@@ -2,91 +2,515 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Random Raindrop Reader</title>
   <style>
-    body { font-family: sans-serif; padding: 20px; max-width: 900px; margin: auto; }
-    select, button { padding: 10px; margin: 10px 5px; }
-    #bookmark { 
-      margin-top: 20px; 
-      padding: 20px; 
-      border: 1px solid #ccc; 
-      border-radius: 8px;
-      min-height: 400px;
-      background: #f9f9f9;
+    * {
+      box-sizing: border-box;
     }
-    #bookmark h3 { 
-      margin-top: 0; 
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      margin: 0;
+      padding: 16px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
       color: #333;
+    }
+    
+    .container {
+      max-width: 100%;
+      margin: 0 auto;
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+      overflow: hidden;
+    }
+    
+    .header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 24px;
+      text-align: center;
+    }
+    
+    .header h1 {
+      margin: 0;
+      font-size: 28px;
+      font-weight: 600;
+    }
+    
+    .controls {
+      padding: 24px;
+      background: #f8fafc;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    
+    .form-group {
+      margin-bottom: 16px;
+    }
+    
+    label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 500;
+      color: #374151;
+    }
+    
+    select {
+      width: 100%;
+      padding: 12px 16px;
+      border: 2px solid #e2e8f0;
+      border-radius: 8px;
+      font-size: 16px;
+      background: white;
+      transition: all 0.3s ease;
+      min-height: 44px;
+    }
+    
+    select:focus {
+      outline: none;
+      border-color: #667eea;
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+    
+    .button-group {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    
+    button {
+      flex: 1;
+      min-width: 120px;
+      padding: 12px 24px;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      min-height: 44px;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .btn-primary {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+    
+    .btn-primary:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
+    }
+    
+    .btn-danger {
+      background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+      color: white;
+    }
+    
+    .btn-danger:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(239, 68, 68, 0.3);
+    }
+    
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none !important;
+      box-shadow: none !important;
+    }
+    
+    .loading {
+      pointer-events: none;
+    }
+    
+    .loading::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 16px;
+      height: 16px;
+      margin: -8px 0 0 -8px;
+      border: 2px solid transparent;
+      border-top: 2px solid currentColor;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
+    #bookmark {
+      padding: 24px;
+      min-height: 300px;
+      background: white;
+    }
+    
+    #bookmark.loading {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #6b7280;
+    }
+    
+    .bookmark-card {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 24px;
+      animation: fadeIn 0.5s ease;
+    }
+    
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    
+    .bookmark-title {
+      margin: 0 0 16px 0;
       font-size: 24px;
+      font-weight: 600;
       line-height: 1.3;
+      color: #1f2937;
     }
-    #bookmark p { 
-      font-size: 16px; 
-      line-height: 1.6; 
-      color: #666;
-      margin: 15px 0;
+    
+    .bookmark-content {
+      max-height: 200px;
+      overflow-y: auto;
+      margin-bottom: 20px;
     }
-    #bookmark a { 
-      display: inline-block;
-      padding: 10px 20px;
-      background: #007bff;
+    
+    .bookmark-excerpt {
+      font-size: 16px;
+      line-height: 1.6;
+      color: #4b5563;
+      margin-bottom: 16px;
+    }
+    
+    .bookmark-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 20px;
+    }
+    
+    .tag {
+      background: #e0e7ff;
+      color: #3730a3;
+      padding: 4px 8px;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 500;
+    }
+    
+    .bookmark-link {
+      display: inline-flex;
+      align-items: center;
+      padding: 12px 24px;
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
       color: white;
       text-decoration: none;
-      border-radius: 5px;
-      margin-top: 15px;
+      border-radius: 8px;
+      font-weight: 500;
+      transition: all 0.3s ease;
+      gap: 8px;
     }
-    #bookmark a:hover { 
-      background: #0056b3; 
+    
+    .bookmark-link:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(16, 185, 129, 0.3);
     }
-    .bookmark-content {
-      max-height: 300px;
-      overflow-y: auto;
-      padding-right: 10px;
+    
+    .error-message {
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      color: #dc2626;
+      padding: 16px;
+      border-radius: 8px;
+      margin: 16px 0;
+    }
+    
+    .success-message {
+      background: #f0fdf4;
+      border: 1px solid #bbf7d0;
+      color: #166534;
+      padding: 16px;
+      border-radius: 8px;
+      margin: 16px 0;
+      text-align: center;
+    }
+    
+    .modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      padding: 20px;
+    }
+    
+    .modal-content {
+      background: white;
+      padding: 24px;
+      border-radius: 12px;
+      max-width: 400px;
+      width: 100%;
+      text-align: center;
+    }
+    
+    .modal-buttons {
+      display: flex;
+      gap: 12px;
+      margin-top: 20px;
+      justify-content: center;
+    }
+    
+    .btn-secondary {
+      background: #f3f4f6;
+      color: #374151;
+      border: 1px solid #d1d5db;
+    }
+    
+    .btn-secondary:hover {
+      background: #e5e7eb;
+    }
+    
+    .keyboard-hint {
+      text-align: center;
+      color: #6b7280;
+      font-size: 14px;
+      margin-top: 16px;
+      padding: 12px;
+      background: #f9fafb;
+      border-radius: 8px;
+    }
+    
+    /* Mobile Optimizations */
+    @media (max-width: 768px) {
+      body {
+        padding: 8px;
+      }
+      
+      .container {
+        border-radius: 12px;
+      }
+      
+      .header {
+        padding: 20px 16px;
+      }
+      
+      .header h1 {
+        font-size: 24px;
+      }
+      
+      .controls {
+        padding: 20px 16px;
+      }
+      
+      .button-group {
+        flex-direction: column;
+      }
+      
+      button {
+        flex: none;
+        min-width: 100%;
+      }
+      
+      #bookmark {
+        padding: 16px;
+      }
+      
+      .bookmark-title {
+        font-size: 20px;
+      }
+      
+      .bookmark-content {
+        max-height: 150px;
+      }
+    }
+    
+    @media (max-width: 480px) {
+      .modal {
+        padding: 16px;
+      }
+      
+      .modal-buttons {
+        flex-direction: column;
+      }
     }
   </style>
 </head>
 <body>
-  <h1>📚 Random Raindrop</h1>
-  
-  <label for="collections">Choose a collection:</label>
-  <select id="collections">
-    <option value="0">All Collections</option>
-  </select>
-  
-  <button id="get">Get Random</button>
-  <button id="delete" disabled>Delete</button>
+  <div class="container">
+    <div class="header">
+      <h1>📚 Random Raindrop</h1>
+    </div>
+    
+    <div class="controls">
+      <div class="form-group">
+        <label for="collections">Choose a collection:</label>
+        <select id="collections" aria-label="Select bookmark collection">
+          <option value="0">All Collections</option>
+        </select>
+      </div>
+      
+      <div class="button-group">
+        <button id="get" class="btn-primary" aria-label="Get random bookmark">
+          <span class="btn-text">Get Random</span>
+        </button>
+        <button id="delete" class="btn-danger" disabled aria-label="Delete current bookmark">
+          <span class="btn-text">Delete</span>
+        </button>
+      </div>
+      
+      <div class="keyboard-hint">
+        💡 Press <strong>Space</strong> for random, <strong>Delete</strong> to remove
+      </div>
+    </div>
 
-  <div id="bookmark"></div>
+    <div id="bookmark" role="main" aria-live="polite"></div>
+  </div>
+  
+  <div id="confirmModal" class="modal" style="display: none;" role="dialog" aria-labelledby="modalTitle" aria-modal="true">
+    <div class="modal-content">
+      <h3 id="modalTitle">Confirm Delete</h3>
+      <p>Are you sure you want to delete this bookmark? This action cannot be undone.</p>
+      <div class="modal-buttons">
+        <button id="confirmDelete" class="btn-danger">Delete</button>
+        <button id="cancelDelete" class="btn-secondary">Cancel</button>
+      </div>
+    </div>
+  </div>
 
   <script>
     let current = null;
     let selectedCollection = null;
+    let collectionsCache = null;
 
-    // Load collections on startup
+    // Utility functions
+    function showLoading(elementId) {
+      const element = document.getElementById(elementId);
+      element.classList.add('loading');
+      if (elementId === 'bookmark') {
+        element.innerHTML = '<div>Loading...</div>';
+      }
+    }
+
+    function hideLoading(elementId) {
+      const element = document.getElementById(elementId);
+      element.classList.remove('loading');
+    }
+
+    function showError(message, retry = false) {
+      const retryBtn = retry ? `<button onclick="getRandom()" style="margin-top: 12px; padding: 8px 16px; background: #667eea; color: white; border: none; border-radius: 6px; cursor: pointer;">Try Again</button>` : '';
+      document.getElementById("bookmark").innerHTML = `
+        <div class="error-message">
+          <strong>Error:</strong> ${message}
+          ${retryBtn}
+        </div>
+      `;
+    }
+
+    function showSuccess(message) {
+      document.getElementById("bookmark").innerHTML = `
+        <div class="success-message">
+          ${message}
+        </div>
+      `;
+    }
+
+    // Cache collections
+    function saveCollectionsCache(collections) {
+      try {
+        localStorage.setItem('raindrop_collections', JSON.stringify({
+          data: collections,
+          timestamp: Date.now()
+        }));
+      } catch (e) {
+        console.warn('Failed to cache collections:', e);
+      }
+    }
+
+    function getCollectionsCache() {
+      try {
+        const cached = localStorage.getItem('raindrop_collections');
+        if (cached) {
+          const { data, timestamp } = JSON.parse(cached);
+          // Cache valid for 1 hour
+          if (Date.now() - timestamp < 3600000) {
+            return data;
+          }
+        }
+      } catch (e) {
+        console.warn('Failed to read collections cache:', e);
+      }
+      return null;
+    }
+
+    // Load collections with caching
     async function loadCollections() {
+      const sel = document.getElementById("collections");
+      
+      // Try cache first
+      const cached = getCollectionsCache();
+      if (cached) {
+        populateCollections(cached);
+        collectionsCache = cached;
+        return;
+      }
+
       try {
         const res = await fetch("/api/getCollections");
         if (!res.ok) {
           throw new Error(`HTTP error! status: ${res.status}`);
         }
         const collections = await res.json();
-        const sel = document.getElementById("collections");
-        collections.forEach(c => {
-          const opt = document.createElement("option");
-          opt.value = c.id;
-          opt.textContent = c.title;
-          sel.appendChild(opt);
-        });
-        selectedCollection = sel.value || "0";
-        sel.addEventListener("change", e => selectedCollection = e.target.value);
+        populateCollections(collections);
+        saveCollectionsCache(collections);
+        collectionsCache = collections;
       } catch (error) {
         console.error("Failed to load collections:", error);
-        document.getElementById("bookmark").innerHTML = `<p>Error loading collections: ${error.message}</p>`;
+        showError(`Failed to load collections: ${error.message}`);
       }
+    }
+
+    function populateCollections(collections) {
+      const sel = document.getElementById("collections");
+      // Clear existing options except "All Collections"
+      while (sel.children.length > 1) {
+        sel.removeChild(sel.lastChild);
+      }
+      
+      collections.forEach(c => {
+        const opt = document.createElement("option");
+        opt.value = c.id;
+        opt.textContent = c.title;
+        sel.appendChild(opt);
+      });
+      selectedCollection = sel.value || "0";
+      sel.addEventListener("change", e => selectedCollection = e.target.value);
     }
 
     async function getRandom() {
       if (!selectedCollection) return;
+      
+      const getBtn = document.getElementById("get");
+      const deleteBtn = document.getElementById("delete");
+      
+      showLoading('get');
+      showLoading('bookmark');
+      deleteBtn.disabled = true;
+      
       try {
         const res = await fetch(`/api/getRandom?collectionId=${selectedCollection}`);
         if (!res.ok) {
@@ -94,28 +518,61 @@
         }
         const data = await res.json();
         if (data.error) {
-          document.getElementById("bookmark").innerHTML = `<p>${data.error}</p>`;
+          showError(data.error, true);
           return;
         }
+        
         current = data;
-        document.getElementById("bookmark").innerHTML = `
-          <h3>${data.title}</h3>
-          <div class="bookmark-content">
-            <p>${data.excerpt || "No description available"}</p>
-            ${data.note ? `<p><strong>Note:</strong> ${data.note}</p>` : ""}
-            ${data.tags && data.tags.length > 0 ? `<p><strong>Tags:</strong> ${data.tags.join(", ")}</p>` : ""}
-          </div>
-          <a href="${data.link}" target="_blank">Read Original</a>
-        `;
-        document.getElementById("delete").disabled = false;
+        displayBookmark(data);
+        deleteBtn.disabled = false;
+        
       } catch (error) {
         console.error("Failed to get random bookmark:", error);
-        document.getElementById("bookmark").innerHTML = `<p>Error getting random bookmark: ${error.message}</p>`;
+        showError(`Failed to get random bookmark: ${error.message}`, true);
+      } finally {
+        hideLoading('get');
+        hideLoading('bookmark');
       }
     }
 
-    async function deleteBookmark() {
+    function displayBookmark(data) {
+      const tags = data.tags && data.tags.length > 0 
+        ? `<div class="bookmark-meta">${data.tags.map(tag => `<span class="tag">${tag}</span>`).join('')}</div>`
+        : '';
+      
+      document.getElementById("bookmark").innerHTML = `
+        <div class="bookmark-card">
+          <h2 class="bookmark-title">${data.title || 'Untitled'}</h2>
+          <div class="bookmark-content">
+            <div class="bookmark-excerpt">${data.excerpt || "No description available"}</div>
+            ${data.note ? `<p><strong>Note:</strong> ${data.note}</p>` : ""}
+          </div>
+          ${tags}
+          <a href="${data.link}" target="_blank" class="bookmark-link" rel="noopener noreferrer">
+            📖 Read Original
+          </a>
+        </div>
+      `;
+    }
+
+    function showDeleteModal() {
+      document.getElementById("confirmModal").style.display = "flex";
+      document.getElementById("confirmDelete").focus();
+    }
+
+    function hideDeleteModal() {
+      document.getElementById("confirmModal").style.display = "none";
+    }
+
+    async function confirmDeleteBookmark() {
       if (!current) return;
+      
+      hideDeleteModal();
+      const deleteBtn = document.getElementById("delete");
+      
+      showLoading('delete');
+      deleteBtn.disabled = true;
+      
       try {
         const res = await fetch(`/api/delete?id=${current._id}`);
         if (!res.ok) {
@@ -123,21 +580,65 @@
         }
         const data = await res.json();
         if (data.success) {
-          document.getElementById("bookmark").innerHTML = "<p>✅ Deleted! Getting new random bookmark...</p>";
-          document.getElementById("delete").disabled = true;
+          showSuccess("✅ Bookmark deleted! Loading new random bookmark...");
           current = null;
           // Automatically get a new random bookmark
-          setTimeout(() => getRandom(), 1000);
+          setTimeout(() => getRandom(), 1500);
         }
       } catch (error) {
         console.error("Failed to delete bookmark:", error);
-        document.getElementById("bookmark").innerHTML = `<p>Error deleting bookmark: ${error.message}</p>`;
+        showError(`Failed to delete bookmark: ${error.message}`);
+        deleteBtn.disabled = false;
+      } finally {
+        hideLoading('delete');
       }
     }
 
+    // Event listeners
     document.getElementById("get").addEventListener("click", getRandom);
-    document.getElementById("delete").addEventListener("click", deleteBookmark);
+    document.getElementById("delete").addEventListener("click", showDeleteModal);
+    document.getElementById("confirmDelete").addEventListener("click", confirmDeleteBookmark);
+    document.getElementById("cancelDelete").addEventListener("click", hideDeleteModal);
 
+    // Keyboard shortcuts
+    document.addEventListener("keydown", function(e) {
+      // Prevent shortcuts when typing in inputs or modal is open
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') {
+        return;
+      }
+      
+      if (document.getElementById("confirmModal").style.display === "flex") {
+        if (e.key === "Escape") {
+          e.preventDefault();
+          hideDeleteModal();
+        } else if (e.key === "Enter") {
+          e.preventDefault();
+          confirmDeleteBookmark();
+        }
+        return;
+      }
+
+      if (e.code === "Space") {
+        e.preventDefault();
+        if (!document.getElementById("get").classList.contains('loading')) {
+          getRandom();
+        }
+      } else if (e.key === "Delete" || e.key === "Backspace") {
+        e.preventDefault();
+        if (current && !document.getElementById("delete").disabled) {
+          showDeleteModal();
+        }
+      }
+    });
+
+    // Modal click outside to close
+    document.getElementById("confirmModal").addEventListener("click", function(e) {
+      if (e.target === this) {
+        hideDeleteModal();
+      }
+    });
+
+    // Initialize app
     loadCollections();
   </script>
 </body>
