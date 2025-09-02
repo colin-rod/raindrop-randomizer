@@ -4,6 +4,10 @@ export default async function handler(req, res) {
   const token = process.env.RAINDROP_TOKEN;
   const { collectionId } = req.query;
 
+  if (!token) {
+    return res.status(500).json({ error: "RAINDROP_TOKEN environment variable is not configured" });
+  }
+
   if (!collectionId) {
     return res.status(400).json({ error: "Missing collectionId" });
   }

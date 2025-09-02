@@ -2,6 +2,10 @@ import fetch from "node-fetch";
 
 export default async function handler(req, res) {
   const token = process.env.RAINDROP_TOKEN;
+  
+  if (!token) {
+    return res.status(500).json({ error: "RAINDROP_TOKEN environment variable is not configured" });
+  }
 
   const resp = await fetch("https://api.raindrop.io/rest/v1/collections", {
     headers: { Authorization: `Bearer ${token}` }
