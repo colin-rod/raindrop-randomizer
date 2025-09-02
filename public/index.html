@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Random Raindrop Reader</title>
+  <style>
+    body { font-family: sans-serif; padding: 20px; max-width: 600px; margin: auto; }
+    select, button { padding: 10px; margin: 10px 5px; }
+    #bookmark { margin-top: 20px; padding: 10px; border: 1px solid #ccc; }
+  </style>
+</head>
+<body>
+  <h1>📚 Random Raindrop</h1>
+  
+  <label for="collections">Choose a collection:</label>
+  <select id="collections"></select>
+  
+  <button id="get">Get Random</button>
+  <button id="delete" disabled>Delete</button>
+
+  <div id="bookmark"></div>
+
+  <script>
+    let current = null;
+    let selectedCollection = null;
+
+    // Load collections on startup
+    async function loadCollections() {
+      const res = await fetch("/api/getCollections");
+      const collections = await res.json();
+      const sel = document.getElementById("collections");
+      collections.forEach(c => {
+        const opt = document.createElement("option");
+        opt.value = c.id;
+        opt.textContent = c.title;
+        sel.appendChild(opt);
+      });
+      selectedCollection = sel.value;
+      sel.addEventListener("change", e => selectedCollection = e.target.value);
+    }
+
+    async function getRandom() {
+      if (!selectedCollection) return;
+      const res = await fetch(`/api/getRandom?collectionId=${selectedCollection}`);
+      const data = await res.json();
+      if (data.error) {
+        document.getElementById("bookmark").innerHTML = `<p>${data.error}</p>`;
+        return;
+      }
+      current = data;
+      document.getElementById("bookmark").innerHTML = `
+        <h3>${data.title}</h3>
+        <p>${data.excerpt || ""}</p>
+        <a href="${data.link}" target="_blank">Read link</a>
+      `;
+      document.getElementById("delete").disabled = false;
+    }
+
+    async function deleteBookmark() {
+      if (!current) return;
+      const res = await fetch(`/api/delete?id=${current._id}`);
+      const data = await res.json();
+      if (data.success) {
+        document.getElementById("bookmark").innerHTML = "<p>✅ Deleted!</p>";
+        document.getElementById("delete").disabled = true;
+        current = null;
+      }
+    }
+
+    document.getElementById("get").addEventListener("click", getRandom);
+    document.getElementById("delete").addEventListener("click", deleteBookmark);
+
+    loadCollections();
+  </script>
+</body>
+</html>

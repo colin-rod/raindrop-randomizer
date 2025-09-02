@@ -1,0 +1,11 @@
+# dependencies
+node_modules/
+
+# local env files
+.env
+
+# Vercel
+.vercel
+
+# logs
+npm-debug.log*
