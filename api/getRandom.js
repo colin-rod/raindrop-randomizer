@@ -18,6 +18,11 @@ export default async function handler(req, res) {
       `https://api.raindrop.io/rest/v1/raindrops/${collectionId}?perpage=${perpage}&page=${page}`,
       { headers: { Authorization: `Bearer ${token}` } }
     );
+    
+    if (!resp.ok) {
+      return res.status(500).json({ error: "Failed to fetch bookmarks from collection" });
+    }
+    
     const data = await resp.json();
     if (!data.items.length) break;
     all = all.concat(data.items);

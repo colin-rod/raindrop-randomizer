@@ -7,11 +7,11 @@ export default async function handler(req, res) {
     headers: { Authorization: `Bearer ${token}` }
   });
 
-  const data = await resp.json();
-
   if (!resp.ok) {
     return res.status(500).json({ error: "Failed to fetch collections" });
   }
+
+  const data = await resp.json();
 
   // Only return id + title for simplicity
   const collections = data.items.map(c => ({

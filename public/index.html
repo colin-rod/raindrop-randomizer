@@ -26,44 +26,68 @@
 
     // Load collections on startup
     async function loadCollections() {
-      const res = await fetch("/api/getCollections");
-      const collections = await res.json();
-      const sel = document.getElementById("collections");
-      collections.forEach(c => {
-        const opt = document.createElement("option");
-        opt.value = c.id;
-        opt.textContent = c.title;
-        sel.appendChild(opt);
-      });
-      selectedCollection = sel.value;
-      sel.addEventListener("change", e => selectedCollection = e.target.value);
+      try {
+        const res = await fetch("/api/getCollections");
+        if (!res.ok) {
+          throw new Error(`HTTP error! status: ${res.status}`);
+        }
+        const collections = await res.json();
+        const sel = document.getElementById("collections");
+        collections.forEach(c => {
+          const opt = document.createElement("option");
+          opt.value = c.id;
+          opt.textContent = c.title;
+          sel.appendChild(opt);
+        });
+        selectedCollection = sel.value;
+        sel.addEventListener("change", e => selectedCollection = e.target.value);
+      } catch (error) {
+        console.error("Failed to load collections:", error);
+        document.getElementById("bookmark").innerHTML = `<p>Error loading collections: ${error.message}</p>`;
+      }
     }
 
     async function getRandom() {
       if (!selectedCollection) return;
-      const res = await fetch(`/api/getRandom?collectionId=${selectedCollection}`);
-      const data = await res.json();
-      if (data.error) {
-        document.getElementById("bookmark").innerHTML = `<p>${data.error}</p>`;
-        return;
+      try {
+        const res = await fetch(`/api/getRandom?collectionId=${selectedCollection}`);
+        if (!res.ok) {
+          throw new Error(`HTTP error! status: ${res.status}`);
+        }
+        const data = await res.json();
+        if (data.error) {
+          document.getElementById("bookmark").innerHTML = `<p>${data.error}</p>`;
+          return;
+        }
+        current = data;
+        document.getElementById("bookmark").innerHTML = `
+          <h3>${data.title}</h3>
+          <p>${data.excerpt || ""}</p>
+          <a href="${data.link}" target="_blank">Read link</a>
+        `;
+        document.getElementById("delete").disabled = false;
+      } catch (error) {
+        console.error("Failed to get random bookmark:", error);
+        document.getElementById("bookmark").innerHTML = `<p>Error getting random bookmark: ${error.message}</p>`;
       }
-      current = data;
-      document.getElementById("bookmark").innerHTML = `
-        <h3>${data.title}</h3>
-        <p>${data.excerpt || ""}</p>
-        <a href="${data.link}" target="_blank">Read link</a>
-      `;
-      document.getElementById("delete").disabled = false;
     }
 
     async function deleteBookmark() {
       if (!current) return;
-      const res = await fetch(`/api/delete?id=${current._id}`);
-      const data = await res.json();
-      if (data.success) {
-        document.getElementById("bookmark").innerHTML = "<p>✅ Deleted!</p>";
-        document.getElementById("delete").disabled = true;
-        current = null;
+      try {
+        const res = await fetch(`/api/delete?id=${current._id}`);
+        if (!res.ok) {
+          throw new Error(`HTTP error! status: ${res.status}`);
+        }
+        const data = await res.json();
+        if (data.success) {
+          document.getElementById("bookmark").innerHTML = "<p>✅ Deleted!</p>";
+          document.getElementById("delete").disabled = true;
+          current = null;
+        }
+      } catch (error) {
+        console.error("Failed to delete bookmark:", error);
+        document.getElementById("bookmark").innerHTML = `<p>Error deleting bookmark: ${error.message}</p>`;
       }
     }
 
