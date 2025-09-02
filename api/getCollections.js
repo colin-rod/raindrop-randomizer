@@ -12,7 +12,12 @@ export default async function handler(req, res) {
   });
 
   if (!resp.ok) {
-    return res.status(500).json({ error: "Failed to fetch collections" });
+    const errorText = await resp.text();
+    console.error(`Raindrop API error: ${resp.status} - ${errorText}`);
+    return res.status(500).json({ 
+      error: `Failed to fetch collections: ${resp.status} ${resp.statusText}`,
+      details: errorText 
+    });
   }
 
   const data = await resp.json();
