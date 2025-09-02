@@ -123,9 +123,11 @@
         }
         const data = await res.json();
         if (data.success) {
-          document.getElementById("bookmark").innerHTML = "<p>✅ Deleted!</p>";
+          document.getElementById("bookmark").innerHTML = "<p>✅ Deleted! Getting new random bookmark...</p>";
           document.getElementById("delete").disabled = true;
           current = null;
+          // Automatically get a new random bookmark
+          setTimeout(() => getRandom(), 1000);
         }
       } catch (error) {
         console.error("Failed to delete bookmark:", error);
