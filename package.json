@@ -1,0 +1,15 @@
+{
+  "name": "raindrop-randomizer",
+  "version": "1.0.0",
+  "description": "Random Raindrop bookmark reader",
+  "main": "index.js",
+  "dependencies": {
+    "node-fetch": "^3.3.2"
+  },
+  "scripts": {
+    "dev": "vercel dev",
+    "build": "vercel build",
+    "start": "vercel start"
+  },
+  "type": "module"
+}
