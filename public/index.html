@@ -13,9 +13,9 @@
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
       margin: 0;
       padding: 16px;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
       min-height: 100vh;
-      color: #333;
+      color: #212529;
     }
     
     .container {
@@ -23,15 +23,16 @@
       margin: 0 auto;
       background: white;
       border-radius: 16px;
-      box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+      box-shadow: 0 20px 40px rgba(0,0,0,0.15), 0 8px 16px rgba(0,0,0,0.1);
       overflow: hidden;
     }
     
     .header {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      background: linear-gradient(135deg, #495057 0%, #343a40 100%);
       color: white;
       padding: 24px;
       text-align: center;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
     }
     
     .header h1 {
@@ -42,8 +43,9 @@
     
     .controls {
       padding: 24px;
-      background: #f8fafc;
-      border-bottom: 1px solid #e2e8f0;
+      background: #f8f9fa;
+      border-bottom: 1px solid #dee2e6;
+      box-shadow: inset 0 -2px 4px rgba(0,0,0,0.05);
     }
     
     .form-group {
@@ -60,18 +62,19 @@
     select {
       width: 100%;
       padding: 12px 16px;
-      border: 2px solid #e2e8f0;
+      border: 2px solid #ced4da;
       border-radius: 8px;
       font-size: 16px;
       background: white;
       transition: all 0.3s ease;
       min-height: 44px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
     
     select:focus {
       outline: none;
-      border-color: #667eea;
-      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+      border-color: #495057;
+      box-shadow: 0 0 0 3px rgba(73, 80, 87, 0.15), 0 4px 8px rgba(0,0,0,0.15);
     }
     
     .button-group {
@@ -96,23 +99,25 @@
     }
     
     .btn-primary {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      background: linear-gradient(135deg, #495057 0%, #343a40 100%);
       color: white;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
     }
     
     .btn-primary:hover:not(:disabled) {
       transform: translateY(-2px);
-      box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
+      box-shadow: 0 8px 20px rgba(0,0,0,0.25), 0 4px 12px rgba(0,0,0,0.15);
     }
     
     .btn-danger {
-      background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+      background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
       color: white;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
     }
     
     .btn-danger:hover:not(:disabled) {
       transform: translateY(-2px);
-      box-shadow: 0 8px 20px rgba(239, 68, 68, 0.3);
+      box-shadow: 0 8px 20px rgba(0,0,0,0.25), 0 4px 12px rgba(0,0,0,0.15);
     }
     
     button:disabled {
@@ -159,11 +164,12 @@
     }
     
     .bookmark-card {
-      background: #f8fafc;
-      border: 1px solid #e2e8f0;
+      background: #f8f9fa;
+      border: 1px solid #dee2e6;
       border-radius: 12px;
       padding: 24px;
       animation: fadeIn 0.5s ease;
+      box-shadow: 0 8px 16px rgba(0,0,0,0.1), 0 4px 8px rgba(0,0,0,0.05);
     }
     
     @keyframes fadeIn {
@@ -176,7 +182,9 @@
       font-size: 24px;
       font-weight: 600;
       line-height: 1.3;
-      color: #1f2937;
+      color: #212529;
+      text-align: right;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
     
     .bookmark-content {
@@ -188,7 +196,7 @@
     .bookmark-excerpt {
       font-size: 16px;
       line-height: 1.6;
-      color: #4b5563;
+      color: #6c757d;
       margin-bottom: 16px;
     }
     
@@ -200,49 +208,53 @@
     }
     
     .tag {
-      background: #e0e7ff;
-      color: #3730a3;
+      background: #e9ecef;
+      color: #495057;
       padding: 4px 8px;
       border-radius: 6px;
       font-size: 14px;
       font-weight: 500;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
     
     .bookmark-link {
       display: inline-flex;
       align-items: center;
       padding: 12px 24px;
-      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
       color: white;
       text-decoration: none;
       border-radius: 8px;
       font-weight: 500;
       transition: all 0.3s ease;
       gap: 8px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
     }
     
     .bookmark-link:hover {
       transform: translateY(-2px);
-      box-shadow: 0 8px 20px rgba(16, 185, 129, 0.3);
+      box-shadow: 0 8px 20px rgba(0,0,0,0.25), 0 4px 12px rgba(0,0,0,0.15);
     }
     
     .error-message {
-      background: #fef2f2;
-      border: 1px solid #fecaca;
-      color: #dc2626;
+      background: #f8f9fa;
+      border: 1px solid #ced4da;
+      color: #495057;
       padding: 16px;
       border-radius: 8px;
       margin: 16px 0;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
     }
     
     .success-message {
-      background: #f0fdf4;
-      border: 1px solid #bbf7d0;
-      color: #166534;
+      background: #f8f9fa;
+      border: 1px solid #ced4da;
+      color: #212529;
       padding: 16px;
       border-radius: 8px;
       margin: 16px 0;
       text-align: center;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
     }
     
     .modal {
@@ -266,6 +278,7 @@
       max-width: 400px;
       width: 100%;
       text-align: center;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.3), 0 8px 16px rgba(0,0,0,0.15);
     }
     
     .modal-buttons {
@@ -276,23 +289,26 @@
     }
     
     .btn-secondary {
-      background: #f3f4f6;
-      color: #374151;
-      border: 1px solid #d1d5db;
+      background: #f8f9fa;
+      color: #495057;
+      border: 1px solid #ced4da;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
     
     .btn-secondary:hover {
-      background: #e5e7eb;
+      background: #e9ecef;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.15);
     }
     
     .keyboard-hint {
       text-align: center;
-      color: #6b7280;
+      color: #6c757d;
       font-size: 14px;
       margin-top: 16px;
       padding: 12px;
-      background: #f9fafb;
+      background: #f8f9fa;
       border-radius: 8px;
+      box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);
     }
     
     /* Mobile Optimizations */
@@ -353,7 +369,7 @@
 <body>
   <div class="container">
     <div class="header">
-      <h1>📚 Random Raindrop</h1>
+      <h1>Random Raindrop</h1>
     </div>
     
     <div class="controls">
@@ -412,7 +428,7 @@
     }
 
     function showError(message, retry = false) {
-      const retryBtn = retry ? `<button onclick="getRandom()" style="margin-top: 12px; padding: 8px 16px; background: #667eea; color: white; border: none; border-radius: 6px; cursor: pointer;">Try Again</button>` : '';
+      const retryBtn = retry ? `<button onclick="getRandom()" style="margin-top: 12px; padding: 8px 16px; background: #495057; color: white; border: none; border-radius: 6px; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">Try Again</button>` : '';
       document.getElementById("bookmark").innerHTML = `
         <div class="error-message">
           <strong>Error:</strong> ${message}
