@@ -22,10 +22,11 @@ export default async function handler(req, res) {
 
   const data = await resp.json();
 
-  // Only return id + title for simplicity
+  // Return id, title, and count
   const collections = data.items.map(c => ({
     id: c._id,
-    title: c.title
+    title: c.title,
+    count: c.count
   }));
 
   return res.status(200).json(collections);

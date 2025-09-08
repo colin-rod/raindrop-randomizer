@@ -217,6 +217,36 @@
       box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
     
+    .length-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      margin-bottom: 12px;
+    }
+    
+    .length-short {
+      background: #d4edda;
+      color: #155724;
+      border: 1px solid #c3e6cb;
+    }
+    
+    .length-medium {
+      background: #fff3cd;
+      color: #856404;
+      border: 1px solid #faeeba;
+    }
+    
+    .length-long {
+      background: #f8d7da;
+      color: #721c24;
+      border: 1px solid #f5c6cb;
+    }
+    
     .bookmark-link {
       display: inline-flex;
       align-items: center;
@@ -510,7 +540,7 @@
       collections.forEach(c => {
         const opt = document.createElement("option");
         opt.value = c.id;
-        opt.textContent = c.title;
+        opt.textContent = `${c.title} (${c.count})`;
         sel.appendChild(opt);
       });
       selectedCollection = sel.value || "0";
@@ -556,9 +586,17 @@
         ? `<div class="bookmark-meta">${data.tags.map(tag => `<span class="tag">${tag}</span>`).join('')}</div>`
         : '';
       
+      // Create length badge if available
+      const lengthBadge = data.lengthEstimate 
+        ? `<div class="length-badge length-${data.lengthEstimate.category.toLowerCase()}">
+             📏 ${data.lengthEstimate.category} • ${data.lengthEstimate.readTime}
+           </div>`
+        : '';
+      
       document.getElementById("bookmark").innerHTML = `
         <div class="bookmark-card">
           <h2 class="bookmark-title">${data.title || 'Untitled'}</h2>
+          ${lengthBadge}
           <div class="bookmark-content">
             <div class="bookmark-excerpt">${data.excerpt || "No description available"}</div>
             ${data.note ? `<p><strong>Note:</strong> ${data.note}</p>` : ""}

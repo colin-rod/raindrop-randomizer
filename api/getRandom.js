@@ -42,5 +42,38 @@ export default async function handler(req, res) {
   }
 
   const random = all[Math.floor(Math.random() * all.length)];
-  return res.status(200).json(random);
+  
+  // Add article length estimation
+  const estimateLength = (bookmark) => {
+    // Use excerpt length as a proxy for article length
+    const excerptLength = (bookmark.excerpt || '').length;
+    const hasNote = (bookmark.note || '').length > 0;
+    
+    // Rough estimation based on excerpt length
+    // Assuming excerpt is about 10-20% of full article
+    let estimatedWords = Math.round(excerptLength * 0.15); // rough word count from excerpt
+    
+    // Boost estimate for articles vs other content types
+    if (bookmark.type === 'article') {
+      estimatedWords = Math.max(estimatedWords, 200); // minimum for articles
+      estimatedWords = Math.round(estimatedWords * 5); // articles likely longer than excerpt suggests
+    }
+    
+    // Add bonus for having notes (suggests more substantial content)
+    if (hasNote) {
+      estimatedWords = Math.round(estimatedWords * 1.2);
+    }
+    
+    // Categorize length
+    if (estimatedWords < 500) return { category: 'Short', words: estimatedWords, readTime: '1-2 min' };
+    if (estimatedWords < 1500) return { category: 'Medium', words: estimatedWords, readTime: '3-6 min' };
+    return { category: 'Long', words: estimatedWords, readTime: '7+ min' };
+  };
+  
+  const enrichedRandom = {
+    ...random,
+    lengthEstimate: estimateLength(random)
+  };
+  
+  return res.status(200).json(enrichedRandom);
 }
