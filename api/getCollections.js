@@ -22,11 +22,16 @@ export default async function handler(req, res) {
 
   const data = await resp.json();
 
+  // Debug: log the first collection to see what fields are available
+  if (data.items && data.items.length > 0) {
+    console.log('First collection object:', JSON.stringify(data.items[0], null, 2));
+  }
+
   // Return id, title, and count
   const collections = data.items.map(c => ({
     id: c._id,
     title: c.title,
-    count: c.count
+    count: c.count ?? c.size ?? c.itemCount ?? 0  // try multiple possible field names
   }));
 
   return res.status(200).json(collections);
