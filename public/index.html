@@ -410,6 +410,16 @@
         </select>
       </div>
       
+      <div class="form-group">
+        <label for="lengthFilter">Article length:</label>
+        <select id="lengthFilter" aria-label="Filter by article length">
+          <option value="all">All Lengths</option>
+          <option value="short">📏 Short (1-2 min)</option>
+          <option value="medium">📏 Medium (3-6 min)</option>
+          <option value="long">📏 Long (7+ min)</option>
+        </select>
+      </div>
+      
       <div class="button-group">
         <button id="get" class="btn-primary" aria-label="Get random bookmark">
           <span class="btn-text">Get Random</span>
@@ -420,7 +430,8 @@
       </div>
       
       <div class="keyboard-hint">
-        💡 Press <strong>Space</strong> for random, <strong>Delete</strong> to remove
+        💡 Press <strong>Space</strong> for random, <strong>Delete</strong> to remove<br>
+        🎯 Use filters to find articles that match your available time
       </div>
     </div>
 
@@ -441,6 +452,7 @@
   <script>
     let current = null;
     let selectedCollection = null;
+    let selectedLengthFilter = 'all';
     let collectionsCache = null;
 
     // Utility functions
@@ -553,6 +565,11 @@
       });
       selectedCollection = sel.value || "0";
       sel.addEventListener("change", e => selectedCollection = e.target.value);
+      
+      // Set up length filter listener
+      const lengthSel = document.getElementById("lengthFilter");
+      selectedLengthFilter = lengthSel.value || "all";
+      lengthSel.addEventListener("change", e => selectedLengthFilter = e.target.value);
     }
 
     async function getRandom() {
@@ -566,7 +583,8 @@
       deleteBtn.disabled = true;
       
       try {
-        const res = await fetch(`/api/getRandom?collectionId=${selectedCollection}`);
+        const url = `/api/getRandom?collectionId=${selectedCollection}&lengthFilter=${selectedLengthFilter}`;
+        const res = await fetch(url);
         if (!res.ok) {
           throw new Error(`HTTP error! status: ${res.status}`);
         }

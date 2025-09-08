@@ -2,7 +2,7 @@ import fetch from "node-fetch";
 
 export default async function handler(req, res) {
   const token = process.env.RAINDROP_TOKEN;
-  const { collectionId } = req.query;
+  const { collectionId, lengthFilter } = req.query;
 
   if (!token) {
     return res.status(500).json({ error: "RAINDROP_TOKEN environment variable is not configured" });
@@ -41,9 +41,7 @@ export default async function handler(req, res) {
     return res.status(200).json({ error: "No bookmarks in this collection" });
   }
 
-  const random = all[Math.floor(Math.random() * all.length)];
-  
-  // Add article length estimation
+  // Add article length estimation to all bookmarks
   const estimateLength = (bookmark) => {
     // Use excerpt length as a proxy for article length
     const excerptLength = (bookmark.excerpt || '').length;
@@ -69,11 +67,26 @@ export default async function handler(req, res) {
     if (estimatedWords < 1500) return { category: 'Medium', words: estimatedWords, readTime: '3-6 min' };
     return { category: 'Long', words: estimatedWords, readTime: '7+ min' };
   };
+
+  // Add length estimates to all bookmarks
+  const enrichedBookmarks = all.map(bookmark => ({
+    ...bookmark,
+    lengthEstimate: estimateLength(bookmark)
+  }));
+
+  // Filter by length if specified
+  let filteredBookmarks = enrichedBookmarks;
+  if (lengthFilter && lengthFilter !== 'all') {
+    filteredBookmarks = enrichedBookmarks.filter(bookmark => 
+      bookmark.lengthEstimate.category.toLowerCase() === lengthFilter.toLowerCase()
+    );
+  }
+
+  if (!filteredBookmarks.length) {
+    return res.status(200).json({ error: `No ${lengthFilter} articles found in this collection` });
+  }
+
+  const random = filteredBookmarks[Math.floor(Math.random() * filteredBookmarks.length)];
   
-  const enrichedRandom = {
-    ...random,
-    lengthEstimate: estimateLength(random)
-  };
-  
-  return res.status(200).json(enrichedRandom);
+  return res.status(200).json(random);
 }
