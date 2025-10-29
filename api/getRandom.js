@@ -4,6 +4,7 @@ import fetch from "node-fetch";
  * Supported query parameters:
  *  - collectionId (required): Raindrop collection identifier ("0" for all collections)
  *  - lengthFilter (optional): "all" | "short" | "medium" | "long"
+ *  - typeFilter (optional): "all" | "video"
  *  - dateFilter (optional): "any" | "last7" | "last30" | "custom"
  *  - startDate / endDate (optional): ISO date strings used with dateFilter=custom
  *  - addedAfter / addedBefore (optional aliases for startDate/endDate)
@@ -13,6 +14,7 @@ export default async function handler(req, res) {
   const {
     collectionId,
     lengthFilter,
+    typeFilter,
     dateFilter,
     startDate,
     endDate,
@@ -93,10 +95,22 @@ export default async function handler(req, res) {
   const isLengthFilterActive = Boolean(lengthFilter && lengthFilter !== 'all');
   const normalizedLength = lengthFilter ? lengthFilter.toLowerCase() : 'all';
 
+  const normalizedType = (typeFilter || 'all').toLowerCase();
+  if (!['all', 'video'].includes(normalizedType)) {
+    return res.status(400).json({ error: `Unsupported typeFilter value: ${typeFilter}` });
+  }
+  const isContentFilterActive = normalizedType !== 'all';
+
   let filteredBookmarks = enrichedBookmarks;
   if (isLengthFilterActive) {
     filteredBookmarks = filteredBookmarks.filter(bookmark =>
       bookmark.lengthEstimate.category.toLowerCase() === normalizedLength
+    );
+  }
+
+  if (isContentFilterActive) {
+    filteredBookmarks = filteredBookmarks.filter(bookmark =>
+      (bookmark.type || '').toLowerCase() === 'video'
     );
   }
 
@@ -183,6 +197,9 @@ export default async function handler(req, res) {
     }
     if (isLengthFilterActive) {
       return res.status(200).json({ error: `No ${lengthFilter} articles found in this collection` });
+    }
+    if (isContentFilterActive) {
+      return res.status(200).json({ error: 'No video bookmarks available with the video filter enabled' });
     }
     return res.status(200).json({ error: 'No bookmarks available' });
   }
