@@ -225,7 +225,7 @@
       gap: 8px;
       margin-bottom: 20px;
     }
-    
+
     .tag {
       background: #e9ecef;
       color: #495057;
@@ -235,7 +235,14 @@
       font-weight: 500;
       box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
-    
+
+    .bookmark-meta-info {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
     .length-badge {
       display: inline-flex;
       align-items: center;
@@ -245,25 +252,46 @@
       font-size: 13px;
       font-weight: 600;
       box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-      margin-bottom: 12px;
+      margin: 0;
     }
-    
+
     .length-short {
       background: #d4edda;
       color: #155724;
       border: 1px solid #c3e6cb;
     }
-    
+
     .length-medium {
       background: #fff3cd;
       color: #856404;
       border: 1px solid #faeeba;
     }
-    
+
     .length-long {
       background: #f8d7da;
       color: #721c24;
       border: 1px solid #f5c6cb;
+    }
+
+    .meta-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      background: #e7f1ff;
+      color: #1c3d5a;
+      border: 1px solid #d0dcf0;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      margin: 0;
+    }
+
+    .meta-badge__detail {
+      font-weight: 500;
+      font-size: 12px;
+      opacity: 0.85;
     }
     
     .bookmark-link {
@@ -539,6 +567,81 @@
       `;
     }
 
+    function resolveBookmarkTimestamp(data) {
+      if (!data) {
+        return null;
+      }
+
+      const candidates = [data.created, data.lastUpdate];
+      for (const candidate of candidates) {
+        if (!candidate) {
+          continue;
+        }
+
+        const date = new Date(candidate);
+        if (!Number.isNaN(date.getTime())) {
+          return date;
+        }
+      }
+
+      return null;
+    }
+
+    function describeBookmarkTimestamp(data) {
+      const date = resolveBookmarkTimestamp(data);
+      if (!date) {
+        return null;
+      }
+
+      let durationInSeconds = (date.getTime() - Date.now()) / 1000;
+      if (!Number.isFinite(durationInSeconds)) {
+        return null;
+      }
+
+      const supportsRelativeTime = typeof Intl !== 'undefined' && typeof Intl.RelativeTimeFormat === 'function';
+      const formatter = supportsRelativeTime
+        ? new Intl.RelativeTimeFormat(undefined, { numeric: 'auto' })
+        : null;
+
+      const divisions = [
+        { amount: 60, unit: 'second' },
+        { amount: 60, unit: 'minute' },
+        { amount: 24, unit: 'hour' },
+        { amount: 7, unit: 'day' },
+        { amount: 4.34524, unit: 'week' },
+        { amount: 12, unit: 'month' },
+        { amount: Number.POSITIVE_INFINITY, unit: 'year' }
+      ];
+
+      for (const division of divisions) {
+        if (Math.abs(durationInSeconds) < division.amount) {
+          const rounded = Math.round(durationInSeconds);
+          const absRounded = Math.abs(rounded);
+
+          let relative;
+          if (supportsRelativeTime && formatter) {
+            relative = formatter.format(rounded, division.unit);
+          } else if (absRounded === 0) {
+            relative = 'just now';
+          } else {
+            const unitLabel = absRounded === 1 ? division.unit : `${division.unit}s`;
+            const direction = rounded <= 0 ? 'ago' : 'from now';
+            relative = `${absRounded} ${unitLabel} ${direction}`;
+          }
+
+          return {
+            relative,
+            absolute: date.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }),
+            iso: date.toISOString()
+          };
+        }
+
+        durationInSeconds /= division.amount;
+      }
+
+      return null;
+    }
+
     // Cache collections
     function saveCollectionsCache(collections) {
       try {
@@ -764,16 +867,26 @@
         : '';
       
       // Create length badge if available
-      const lengthBadge = data.lengthEstimate 
+      const lengthBadge = data.lengthEstimate
         ? `<div class="length-badge length-${data.lengthEstimate.category.toLowerCase()}">
              📏 ${data.lengthEstimate.category} • ${data.lengthEstimate.readTime}
            </div>`
         : '';
-      
+
+      const timestampInfo = describeBookmarkTimestamp(data);
+      const timestampBadge = timestampInfo
+        ? `<time class="meta-badge" datetime="${timestampInfo.iso}" title="${timestampInfo.absolute}">
+             🕒 Added ${timestampInfo.relative}${timestampInfo.absolute ? `<span class="meta-badge__detail">• ${timestampInfo.absolute}</span>` : ''}
+           </time>`
+        : '';
+
+      const metaBadges = [lengthBadge, timestampBadge].filter(Boolean).join('');
+      const metaSection = metaBadges ? `<div class="bookmark-meta-info">${metaBadges}</div>` : '';
+
         document.getElementById("bookmark").innerHTML = `
           <div class="bookmark-card">
             <h2 class="bookmark-title"><a href="${data.link}" target="_blank" rel="noopener noreferrer">${data.title || 'Untitled'}</a></h2>
-            ${lengthBadge}
+            ${metaSection}
             <div class="bookmark-content">
               <div class="bookmark-excerpt">${data.excerpt || "No description available"}</div>
               ${data.note ? `<p><strong>Note:</strong> ${data.note}</p>` : ""}
