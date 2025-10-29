@@ -631,6 +631,159 @@
     let customStartDate = '';
     let customEndDate = '';
     let editFormLoading = false;
+    const defaultContentFilterLabels = {};
+    const defaultDateFilterLabels = {};
+    const filterStatsCache = new Map();
+    let lastFilterStatsRequestId = 0;
+    const numberFormatter = typeof Intl !== 'undefined' && typeof Intl.NumberFormat === 'function'
+      ? new Intl.NumberFormat()
+      : null;
+
+    function formatCount(value) {
+      const numeric = Number(value);
+      const safeValue = Number.isFinite(numeric) ? numeric : 0;
+      return numberFormatter ? numberFormatter.format(safeValue) : String(safeValue);
+    }
+
+    function captureDefaultFilterLabels() {
+      const contentSelect = document.getElementById("contentFilter");
+      if (contentSelect) {
+        Array.from(contentSelect.options).forEach(option => {
+          defaultContentFilterLabels[option.value] = option.textContent;
+          option.dataset.defaultLabel = option.textContent;
+        });
+      }
+
+      const dateSelect = document.getElementById("dateFilter");
+      if (dateSelect) {
+        Array.from(dateSelect.options).forEach(option => {
+          defaultDateFilterLabels[option.value] = option.textContent;
+          option.dataset.defaultLabel = option.textContent;
+        });
+      }
+    }
+
+    captureDefaultFilterLabels();
+
+    function setFilterSelectLoading(isLoading) {
+      const selects = [
+        document.getElementById("contentFilter"),
+        document.getElementById("dateFilter")
+      ];
+
+      selects.forEach(select => {
+        if (!select) return;
+
+        if (isLoading) {
+          if (!select.dataset.wasDisabled) {
+            select.dataset.wasDisabled = select.disabled ? 'true' : 'false';
+          }
+          select.classList.add('loading');
+          select.disabled = true;
+          select.setAttribute('aria-busy', 'true');
+        } else {
+          const wasDisabled = select.dataset.wasDisabled === 'true';
+          if (!wasDisabled) {
+            select.disabled = false;
+          }
+          select.classList.remove('loading');
+          select.removeAttribute('aria-busy');
+          delete select.dataset.wasDisabled;
+        }
+      });
+    }
+
+    function applyFilterCounts(stats) {
+      const contentSelect = document.getElementById("contentFilter");
+      const dateSelect = document.getElementById("dateFilter");
+      const hasStats = stats && typeof stats === 'object';
+
+      if (contentSelect) {
+        const totalItems = hasStats ? formatCount(stats.totalItems) : null;
+        const videoItems = hasStats ? formatCount(stats.videoItems) : null;
+
+        Array.from(contentSelect.options).forEach(option => {
+          const defaultLabel = option.dataset.defaultLabel || defaultContentFilterLabels[option.value];
+          if (!defaultLabel) return;
+
+          if (!hasStats) {
+            option.textContent = defaultLabel;
+            return;
+          }
+
+          if (option.value === 'all') {
+            option.textContent = `${defaultLabel} (${totalItems})`;
+          } else if (option.value === 'video') {
+            option.textContent = `${defaultLabel} (${videoItems})`;
+          } else {
+            option.textContent = defaultLabel;
+          }
+        });
+      }
+
+      if (dateSelect) {
+        const totalItems = hasStats ? formatCount(stats.totalItems) : null;
+        const last7Days = hasStats ? formatCount(stats.last7Days) : null;
+        const last30Days = hasStats ? formatCount(stats.last30Days) : null;
+
+        Array.from(dateSelect.options).forEach(option => {
+          const defaultLabel = option.dataset.defaultLabel || defaultDateFilterLabels[option.value];
+          if (!defaultLabel) return;
+
+          if (!hasStats) {
+            option.textContent = defaultLabel;
+            return;
+          }
+
+          if (option.value === 'any') {
+            option.textContent = `${defaultLabel} (${totalItems})`;
+          } else if (option.value === 'last7') {
+            option.textContent = `${defaultLabel} (${last7Days})`;
+          } else if (option.value === 'last30') {
+            option.textContent = `${defaultLabel} (${last30Days})`;
+          } else {
+            option.textContent = defaultLabel;
+          }
+        });
+      }
+    }
+
+    async function updateFilterCounts(collectionId) {
+      const normalizedId = collectionId != null ? String(collectionId) : '0';
+
+      if (filterStatsCache.has(normalizedId)) {
+        lastFilterStatsRequestId += 1;
+        const cached = filterStatsCache.get(normalizedId);
+        applyFilterCounts(cached);
+        setFilterSelectLoading(false);
+        return cached;
+      }
+
+      const requestId = ++lastFilterStatsRequestId;
+      setFilterSelectLoading(true);
+      try {
+        const response = await fetch(`/api/getFilterStats?collectionId=${encodeURIComponent(normalizedId)}`);
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const payload = await response.json();
+        filterStatsCache.set(normalizedId, payload);
+        if (requestId === lastFilterStatsRequestId) {
+          applyFilterCounts(payload);
+        }
+        return payload;
+      } catch (error) {
+        console.error('Failed to fetch filter stats:', error);
+        if (requestId === lastFilterStatsRequestId) {
+          applyFilterCounts(null);
+        }
+        return null;
+      } finally {
+        if (requestId === lastFilterStatsRequestId) {
+          setFilterSelectLoading(false);
+        }
+      }
+    }
 
     try {
       const storedContentFilter = localStorage.getItem('raindrop_content_filter');
@@ -884,7 +1037,11 @@
           sel.appendChild(opt);
         });
         selectedCollection = sel.value || "0";
-        sel.addEventListener("change", e => selectedCollection = e.target.value);
+        updateFilterCounts(selectedCollection);
+        sel.addEventListener("change", e => {
+          selectedCollection = e.target.value;
+          updateFilterCounts(selectedCollection);
+        });
 
         // Set up length filter listener
         const lengthSel = document.getElementById("lengthFilter");
