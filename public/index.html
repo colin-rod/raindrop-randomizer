@@ -71,6 +71,30 @@
       box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
 
+    @media (min-width: 768px) {
+      .controls {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 16px;
+        align-items: end;
+        padding: 16px;
+      }
+
+      .controls .form-group {
+        margin-bottom: 0;
+      }
+
+      .controls .button-group,
+      .controls .keyboard-hint {
+        grid-column: 1 / -1;
+      }
+
+      .controls select {
+        padding: 10px 14px;
+        min-height: 42px;
+      }
+    }
+
     .custom-date-range {
       display: none;
       margin-top: 12px;
