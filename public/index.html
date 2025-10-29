@@ -551,6 +551,59 @@
       }
     }
 
+    function refreshCollectionCounts() {
+      if (!Array.isArray(collectionsCache)) {
+        return;
+      }
+
+      const collectionsSelect = document.getElementById("collections");
+      if (!collectionsSelect) {
+        return;
+      }
+
+      const totalCount = collectionsCache.reduce((sum, collection) => {
+        const value = Number(collection.count);
+        return sum + (Number.isFinite(value) ? value : 0);
+      }, 0);
+
+      const allCollectionsOption = collectionsSelect.querySelector('option[value="0"]') || collectionsSelect.children[0];
+      if (allCollectionsOption) {
+        allCollectionsOption.textContent = `All Collections (${totalCount})`;
+      }
+
+      collectionsCache.forEach(collection => {
+        const option = collectionsSelect.querySelector(`option[value="${String(collection.id)}"]`);
+        if (option) {
+          option.textContent = `${collection.title} (${collection.count})`;
+        }
+      });
+
+      populateEditCollectionsSelect(collectionsCache);
+      saveCollectionsCache(collectionsCache);
+    }
+
+    function applyBookmarkRemovalToCache(bookmark) {
+      if (!bookmark || !Array.isArray(collectionsCache)) {
+        return;
+      }
+
+      const resolvedCollectionId = bookmark.collectionId
+        ?? bookmark.collection?.$id
+        ?? bookmark.collection?._id;
+
+      if (resolvedCollectionId == null) {
+        return;
+      }
+
+      const target = collectionsCache.find(collection => String(collection.id) === String(resolvedCollectionId));
+      if (!target) {
+        return;
+      }
+
+      const currentCount = Number(target.count) || 0;
+      target.count = Math.max(0, currentCount - 1);
+    }
+
     function getCollectionsCache() {
       try {
         const cached = localStorage.getItem('raindrop_collections');
@@ -901,10 +954,12 @@
           const res = await fetch(`/api/delete?id=${current._id}`);
           if (!res.ok) {
             throw new Error(`HTTP error! status: ${res.status}`);
-        }
-        const data = await res.json();
+          }
+          const data = await res.json();
           if (data.success) {
             showSuccess("✅ Bookmark deleted! Loading new random bookmark...");
+            applyBookmarkRemovalToCache(current);
+            refreshCollectionCounts();
             current = null;
             if (editBtn) {
               editBtn.disabled = true;
