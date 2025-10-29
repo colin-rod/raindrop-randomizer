@@ -58,7 +58,7 @@
       font-weight: 500;
       color: #374151;
     }
-    
+
     select {
       width: 100%;
       padding: 12px 16px;
@@ -70,7 +70,47 @@
       min-height: 44px;
       box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
-    
+
+    .custom-date-range {
+      display: none;
+      margin-top: 12px;
+      gap: 12px;
+    }
+
+    .custom-date-range.active {
+      display: flex;
+      flex-wrap: wrap;
+    }
+
+    .custom-date-range label {
+      font-weight: 500;
+      margin-bottom: 4px;
+    }
+
+    .custom-date-range .date-input {
+      flex: 1 1 180px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .custom-date-range input[type="date"] {
+      width: 100%;
+      padding: 10px 12px;
+      border: 2px solid #ced4da;
+      border-radius: 8px;
+      font-size: 16px;
+      background: white;
+      transition: border 0.3s ease;
+      min-height: 44px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+    }
+
+    .custom-date-range input[type="date"]:focus {
+      outline: none;
+      border-color: #495057;
+      box-shadow: 0 0 0 3px rgba(73, 80, 87, 0.15), 0 4px 8px rgba(0,0,0,0.15);
+    }
+
     select:focus {
       outline: none;
       border-color: #495057;
@@ -438,6 +478,27 @@
           <option value="long">📏 Long (7+ min)</option>
         </select>
       </div>
+
+      <div class="form-group">
+        <label for="dateFilter">Date added:</label>
+        <select id="dateFilter" aria-label="Filter by bookmark creation date">
+          <option value="any">Any time</option>
+          <option value="last7">Last 7 days</option>
+          <option value="last30">Last 30 days</option>
+          <option value="custom">Custom range…</option>
+        </select>
+
+        <div id="customDateContainer" class="custom-date-range" aria-hidden="true">
+          <div class="date-input">
+            <label for="customStartDate">Start date</label>
+            <input type="date" id="customStartDate" name="customStartDate" aria-label="Custom start date" />
+          </div>
+          <div class="date-input">
+            <label for="customEndDate">End date (optional)</label>
+            <input type="date" id="customEndDate" name="customEndDate" aria-label="Custom end date" />
+          </div>
+        </div>
+      </div>
       
       <div class="button-group">
         <button id="get" class="btn-primary" aria-label="Get random bookmark">
@@ -453,7 +514,7 @@
       
       <div class="keyboard-hint">
         💡 Press <strong>Space</strong> for random, <strong>Delete</strong> to remove<br>
-        🎯 Use filters to find articles that match your available time
+        🎯 Use filters to find articles that match your available time or mood
       </div>
     </div>
 
@@ -505,6 +566,9 @@
     let selectedCollection = null;
     let selectedLengthFilter = 'all';
     let collectionsCache = null;
+    let selectedDateFilter = 'any';
+    let customStartDate = '';
+    let customEndDate = '';
     let editFormLoading = false;
 
     // Utility functions
@@ -676,6 +740,42 @@
         const lengthSel = document.getElementById("lengthFilter");
         selectedLengthFilter = lengthSel.value || "all";
         lengthSel.addEventListener("change", e => selectedLengthFilter = e.target.value);
+
+        const dateSel = document.getElementById("dateFilter");
+        const customDateContainer = document.getElementById("customDateContainer");
+        const customStartInput = document.getElementById("customStartDate");
+        const customEndInput = document.getElementById("customEndDate");
+
+        function updateCustomDateVisibility() {
+          if (!customDateContainer) return;
+          const shouldShow = selectedDateFilter === 'custom';
+          customDateContainer.classList.toggle('active', shouldShow);
+          customDateContainer.setAttribute('aria-hidden', shouldShow ? 'false' : 'true');
+        }
+
+        selectedDateFilter = dateSel?.value || 'any';
+        updateCustomDateVisibility();
+
+        if (dateSel) {
+          dateSel.addEventListener("change", e => {
+            selectedDateFilter = e.target.value;
+            updateCustomDateVisibility();
+          });
+        }
+
+        if (customStartInput) {
+          customStartDate = customStartInput.value;
+          customStartInput.addEventListener("change", e => {
+            customStartDate = e.target.value;
+          });
+        }
+
+        if (customEndInput) {
+          customEndDate = customEndInput.value;
+          customEndInput.addEventListener("change", e => {
+            customEndDate = e.target.value;
+          });
+        }
       }
 
       function populateEditCollectionsSelect(collections) {
@@ -728,16 +828,52 @@
         }
 
         try {
-          const url = `/api/getRandom?collectionId=${selectedCollection}&lengthFilter=${selectedLengthFilter}`;
+          const params = new URLSearchParams({
+            collectionId: selectedCollection,
+            lengthFilter: selectedLengthFilter
+          });
+
+          if (selectedDateFilter && selectedDateFilter !== 'any') {
+            if (selectedDateFilter === 'custom') {
+              const hasStart = customStartDate && customStartDate.trim().length > 0;
+              const hasEnd = customEndDate && customEndDate.trim().length > 0;
+
+              if (hasStart || hasEnd) {
+                params.set('dateFilter', 'custom');
+                if (hasStart) {
+                  params.set('startDate', customStartDate);
+                }
+                if (hasEnd) {
+                  params.set('endDate', customEndDate);
+                }
+              }
+            } else {
+              params.set('dateFilter', selectedDateFilter);
+            }
+          }
+
+          const url = `/api/getRandom?${params.toString()}`;
           const res = await fetch(url);
+          let data = null;
+
+          try {
+            data = await res.json();
+          } catch (parseError) {
+            if (!res.ok) {
+              throw new Error(`HTTP error! status: ${res.status}`);
+            }
+            throw parseError;
+          }
+
           if (!res.ok) {
-          throw new Error(`HTTP error! status: ${res.status}`);
-        }
-        const data = await res.json();
-        if (data.error) {
-          showError(data.error, true);
-          return;
-        }
+            const message = data && data.error ? data.error : `HTTP error! status: ${res.status}`;
+            throw new Error(message);
+          }
+
+          if (data.error) {
+            showError(data.error, true);
+            return;
+          }
 
           current = data;
           displayBookmark(data);
@@ -748,7 +884,13 @@
 
         } catch (error) {
           console.error("Failed to get random bookmark:", error);
-          showError(`Failed to get random bookmark: ${error.message}`, true);
+          const fallbackMessage = 'Failed to get random bookmark.';
+          const message = (error && error.message) ? error.message : fallbackMessage;
+          if (message.startsWith('HTTP error')) {
+            showError(`${fallbackMessage} ${message}`, true);
+          } else {
+            showError(message, true);
+          }
         } finally {
           hideLoading('get');
           hideLoading('bookmark');
