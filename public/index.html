@@ -443,6 +443,9 @@
         <button id="get" class="btn-primary" aria-label="Get random bookmark">
           <span class="btn-text">Get Random</span>
         </button>
+        <button id="edit" class="btn-secondary" disabled aria-label="Edit current bookmark">
+          <span class="btn-text">Edit</span>
+        </button>
         <button id="delete" class="btn-danger" disabled aria-label="Delete current bookmark">
           <span class="btn-text">Delete</span>
         </button>
@@ -468,11 +471,41 @@
     </div>
   </div>
 
+  <div id="editModal" class="modal" style="display: none;" role="dialog" aria-labelledby="editModalTitle" aria-modal="true">
+    <div class="modal-content" style="text-align: left;">
+      <h3 id="editModalTitle" style="text-align: center;">Edit Bookmark</h3>
+      <form id="editForm">
+        <div class="form-group">
+          <label for="editTitle">Title</label>
+          <input id="editTitle" name="title" type="text" required style="width: 100%; padding: 12px 16px; border: 2px solid #ced4da; border-radius: 8px; font-size: 16px;" />
+        </div>
+        <div class="form-group">
+          <label for="editTags">Tags (comma separated)</label>
+          <input id="editTags" name="tags" type="text" style="width: 100%; padding: 12px 16px; border: 2px solid #ced4da; border-radius: 8px; font-size: 16px;" />
+        </div>
+        <div class="form-group">
+          <label for="editCollection">Collection</label>
+          <select id="editCollection" name="collection" style="width: 100%; padding: 12px 16px; border: 2px solid #ced4da; border-radius: 8px; font-size: 16px; background: white;">
+            <option value="" disabled selected>Loading collections...</option>
+          </select>
+        </div>
+        <div id="editError" style="display: none; margin-bottom: 12px; color: #b22222; background: #f8d7da; border: 1px solid #f5c6cb; padding: 12px; border-radius: 8px;"></div>
+        <div class="modal-buttons">
+          <button type="submit" id="editSave" class="btn-primary" style="flex: 1;">
+            <span class="btn-text">Save</span>
+          </button>
+          <button type="button" id="editCancel" class="btn-secondary" style="flex: 1;">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <script>
     let current = null;
     let selectedCollection = null;
     let selectedLengthFilter = 'all';
     let collectionsCache = null;
+    let editFormLoading = false;
 
     // Utility functions
     function showLoading(elementId) {
@@ -535,76 +568,116 @@
     }
 
     // Load collections with caching
-    async function loadCollections() {
-      const sel = document.getElementById("collections");
-      
-      // Try cache first
-      const cached = getCollectionsCache();
-      if (cached) {
-        populateCollections(cached);
-        collectionsCache = cached;
-        return;
-      }
+      async function loadCollections() {
 
-      try {
-        const res = await fetch("/api/getCollections");
-        if (!res.ok) {
-          throw new Error(`HTTP error! status: ${res.status}`);
+        // Try cache first
+        const cached = getCollectionsCache();
+        if (cached) {
+          populateCollections(cached);
+          collectionsCache = cached;
+          populateEditCollectionsSelect(cached);
+          return;
         }
-        const collections = await res.json();
-        populateCollections(collections);
-        saveCollectionsCache(collections);
-        collectionsCache = collections;
-      } catch (error) {
-        console.error("Failed to load collections:", error);
-        showError(`Failed to load collections: ${error.message}`);
-      }
-    }
 
-    function populateCollections(collections) {
-      const sel = document.getElementById("collections");
-      
-      // Calculate total count for "All Collections"
-      const totalCount = collections.reduce((sum, c) => sum + (c.count || 0), 0);
-      
-      // Update "All Collections" option with total count
-      const allCollectionsOption = sel.children[0];
-      allCollectionsOption.textContent = `All Collections (${totalCount})`;
-      
-      // Clear existing options except "All Collections"
-      while (sel.children.length > 1) {
-        sel.removeChild(sel.lastChild);
+        try {
+          const res = await fetch("/api/getCollections");
+          if (!res.ok) {
+            throw new Error(`HTTP error! status: ${res.status}`);
+          }
+          const collections = await res.json();
+          populateCollections(collections);
+          saveCollectionsCache(collections);
+          collectionsCache = collections;
+          populateEditCollectionsSelect(collections);
+        } catch (error) {
+          console.error("Failed to load collections:", error);
+          showError(`Failed to load collections: ${error.message}`);
+        }
       }
-      
-      collections.forEach(c => {
-        const opt = document.createElement("option");
-        opt.value = c.id;
-        opt.textContent = `${c.title} (${c.count})`;
-        sel.appendChild(opt);
-      });
-      selectedCollection = sel.value || "0";
-      sel.addEventListener("change", e => selectedCollection = e.target.value);
-      
-      // Set up length filter listener
-      const lengthSel = document.getElementById("lengthFilter");
-      selectedLengthFilter = lengthSel.value || "all";
-      lengthSel.addEventListener("change", e => selectedLengthFilter = e.target.value);
-    }
 
-    async function getRandom() {
-      if (!selectedCollection) return;
-      
-      const getBtn = document.getElementById("get");
-      const deleteBtn = document.getElementById("delete");
-      
-      showLoading('get');
-      showLoading('bookmark');
-      deleteBtn.disabled = true;
-      
-      try {
-        const url = `/api/getRandom?collectionId=${selectedCollection}&lengthFilter=${selectedLengthFilter}`;
-        const res = await fetch(url);
-        if (!res.ok) {
+      function populateCollections(collections) {
+        const sel = document.getElementById("collections");
+
+        // Calculate total count for "All Collections"
+        const totalCount = collections.reduce((sum, c) => sum + (c.count || 0), 0);
+
+        // Update "All Collections" option with total count
+        const allCollectionsOption = sel.children[0];
+        allCollectionsOption.textContent = `All Collections (${totalCount})`;
+
+        // Clear existing options except "All Collections"
+        while (sel.children.length > 1) {
+          sel.removeChild(sel.lastChild);
+        }
+
+        collections.forEach(c => {
+          const opt = document.createElement("option");
+          opt.value = c.id;
+          opt.textContent = `${c.title} (${c.count})`;
+          sel.appendChild(opt);
+        });
+        selectedCollection = sel.value || "0";
+        sel.addEventListener("change", e => selectedCollection = e.target.value);
+
+        // Set up length filter listener
+        const lengthSel = document.getElementById("lengthFilter");
+        selectedLengthFilter = lengthSel.value || "all";
+        lengthSel.addEventListener("change", e => selectedLengthFilter = e.target.value);
+      }
+
+      function populateEditCollectionsSelect(collections) {
+        const editSelect = document.getElementById("editCollection");
+        if (!editSelect) return;
+
+        editSelect.innerHTML = "";
+
+        if (!collections || !collections.length) {
+          const opt = document.createElement("option");
+          opt.value = "";
+          opt.textContent = "No collections available";
+          opt.disabled = true;
+          opt.selected = true;
+          editSelect.appendChild(opt);
+          editSelect.disabled = true;
+          return;
+        }
+
+        editSelect.disabled = false;
+
+        const placeholder = document.createElement("option");
+        placeholder.value = "";
+        placeholder.textContent = "Select a collection";
+        placeholder.disabled = true;
+        placeholder.selected = true;
+        placeholder.hidden = true;
+        editSelect.appendChild(placeholder);
+
+        collections.forEach(c => {
+          const opt = document.createElement("option");
+          opt.value = String(c.id);
+          opt.textContent = `${c.title} (${c.count})`;
+          editSelect.appendChild(opt);
+        });
+      }
+
+      async function getRandom() {
+        if (!selectedCollection) return;
+
+        const getBtn = document.getElementById("get");
+        const deleteBtn = document.getElementById("delete");
+        const editBtn = document.getElementById("edit");
+
+        showLoading('get');
+        showLoading('bookmark');
+        deleteBtn.disabled = true;
+        if (editBtn) {
+          editBtn.disabled = true;
+        }
+
+        try {
+          const url = `/api/getRandom?collectionId=${selectedCollection}&lengthFilter=${selectedLengthFilter}`;
+          const res = await fetch(url);
+          if (!res.ok) {
           throw new Error(`HTTP error! status: ${res.status}`);
         }
         const data = await res.json();
@@ -612,19 +685,25 @@
           showError(data.error, true);
           return;
         }
-        
-        current = data;
-        displayBookmark(data);
-        deleteBtn.disabled = false;
-        
-      } catch (error) {
-        console.error("Failed to get random bookmark:", error);
-        showError(`Failed to get random bookmark: ${error.message}`, true);
-      } finally {
-        hideLoading('get');
-        hideLoading('bookmark');
+
+          current = data;
+          displayBookmark(data);
+          deleteBtn.disabled = false;
+          if (editBtn) {
+            editBtn.disabled = false;
+          }
+
+        } catch (error) {
+          console.error("Failed to get random bookmark:", error);
+          showError(`Failed to get random bookmark: ${error.message}`, true);
+        } finally {
+          hideLoading('get');
+          hideLoading('bookmark');
+          if (editBtn && current) {
+            editBtn.disabled = false;
+          }
+        }
       }
-    }
 
     function displayBookmark(data) {
       const tags = data.tags && data.tags.length > 0 
@@ -638,66 +717,221 @@
            </div>`
         : '';
       
-      document.getElementById("bookmark").innerHTML = `
-        <div class="bookmark-card">
-          <h2 class="bookmark-title"><a href="${data.link}" target="_blank" rel="noopener noreferrer">${data.title || 'Untitled'}</a></h2>
-          ${lengthBadge}
-          <div class="bookmark-content">
-            <div class="bookmark-excerpt">${data.excerpt || "No description available"}</div>
-            ${data.note ? `<p><strong>Note:</strong> ${data.note}</p>` : ""}
+        document.getElementById("bookmark").innerHTML = `
+          <div class="bookmark-card">
+            <h2 class="bookmark-title"><a href="${data.link}" target="_blank" rel="noopener noreferrer">${data.title || 'Untitled'}</a></h2>
+            ${lengthBadge}
+            <div class="bookmark-content">
+              <div class="bookmark-excerpt">${data.excerpt || "No description available"}</div>
+              ${data.note ? `<p><strong>Note:</strong> ${data.note}</p>` : ""}
+            </div>
+            ${tags}
+            <a href="${data.link}" target="_blank" class="bookmark-link" rel="noopener noreferrer">
+              📖 Read Original
+            </a>
           </div>
-          ${tags}
-          <a href="${data.link}" target="_blank" class="bookmark-link" rel="noopener noreferrer">
-            📖 Read Original
-          </a>
-        </div>
-      `;
-    }
+        `;
+
+        const editBtn = document.getElementById("edit");
+        if (editBtn) {
+          editBtn.disabled = false;
+        }
+      }
 
     function showDeleteModal() {
       document.getElementById("confirmModal").style.display = "flex";
       document.getElementById("confirmDelete").focus();
     }
 
-    function hideDeleteModal() {
-      document.getElementById("confirmModal").style.display = "none";
-    }
+      function hideDeleteModal() {
+        document.getElementById("confirmModal").style.display = "none";
+      }
 
-    async function confirmDeleteBookmark() {
-      if (!current) return;
-      
-      hideDeleteModal();
-      const deleteBtn = document.getElementById("delete");
-      
-      showLoading('delete');
-      deleteBtn.disabled = true;
-      
-      try {
-        const res = await fetch(`/api/delete?id=${current._id}`);
-        if (!res.ok) {
-          throw new Error(`HTTP error! status: ${res.status}`);
+      function setEditError(message) {
+        const errorEl = document.getElementById("editError");
+        if (!errorEl) return;
+        if (message) {
+          errorEl.textContent = message;
+          errorEl.style.display = "block";
+        } else {
+          errorEl.textContent = "";
+          errorEl.style.display = "none";
+        }
+      }
+
+      function showEditModal() {
+        if (!current || editFormLoading) return;
+
+        if (collectionsCache) {
+          populateEditCollectionsSelect(collectionsCache);
+        }
+
+        const modal = document.getElementById("editModal");
+        const titleInput = document.getElementById("editTitle");
+        const tagsInput = document.getElementById("editTags");
+        const collectionSelect = document.getElementById("editCollection");
+
+        titleInput.value = current.title || "";
+        tagsInput.value = Array.isArray(current.tags) ? current.tags.join(", ") : "";
+
+        const currentCollectionId = current.collectionId ?? current.collection?.$id ?? current.collection?._id ?? "";
+        if (collectionSelect) {
+          const desiredValue = currentCollectionId != null ? String(currentCollectionId) : "";
+          if (desiredValue && [...collectionSelect.options].some(opt => opt.value === desiredValue)) {
+            collectionSelect.value = desiredValue;
+          } else if (collectionSelect.options.length > 1) {
+            collectionSelect.selectedIndex = 1;
+          } else if (collectionSelect.options.length) {
+            collectionSelect.selectedIndex = 0;
+          }
+        }
+
+        setEditError("");
+        modal.style.display = "flex";
+        setTimeout(() => titleInput.focus(), 0);
+      }
+
+      function hideEditModal(force = false) {
+        if (editFormLoading && !force) return;
+        const modal = document.getElementById("editModal");
+        modal.style.display = "none";
+        setEditError("");
+      }
+
+      async function handleEditSubmit(event) {
+        event.preventDefault();
+        if (!current || editFormLoading) return;
+
+        const titleInput = document.getElementById("editTitle");
+        const tagsInput = document.getElementById("editTags");
+        const collectionSelect = document.getElementById("editCollection");
+        const saveBtn = document.getElementById("editSave");
+        const cancelBtn = document.getElementById("editCancel");
+
+        const title = titleInput.value.trim();
+        if (!title) {
+          setEditError("Title is required.");
+          titleInput.focus();
+          return;
+        }
+
+        const tags = tagsInput.value
+          .split(",")
+          .map(tag => tag.trim())
+          .filter(tag => tag.length > 0);
+
+        const selectedCollectionRaw = collectionSelect && collectionSelect.value
+          ? collectionSelect.value
+          : current.collectionId ?? current.collection?.$id ?? current.collection?._id ?? null;
+        const collectionId = selectedCollectionRaw !== null && selectedCollectionRaw !== ""
+          ? Number(selectedCollectionRaw)
+          : null;
+
+        const payload = {
+          id: current._id,
+          title,
+          tags,
+          collectionId
+        };
+
+        editFormLoading = true;
+        setEditError("");
+        showLoading('editSave');
+        saveBtn.disabled = true;
+        cancelBtn.disabled = true;
+
+        try {
+          const res = await fetch("/api/update", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify(payload)
+          });
+
+          let data;
+          try {
+            data = await res.json();
+          } catch (parseError) {
+            data = null;
+          }
+
+          if (!res.ok || (data && data.error)) {
+            const message = data && data.error ? data.error : `Failed to update bookmark (status ${res.status})`;
+            throw new Error(message);
+          }
+
+          const updatedBookmark = data?.item || data || {};
+          current = {
+            ...current,
+            ...updatedBookmark,
+            title: updatedBookmark.title ?? title,
+            tags: Array.isArray(updatedBookmark.tags) ? updatedBookmark.tags : tags,
+            collectionId: updatedBookmark.collectionId ?? (collectionId ?? current.collectionId),
+            collection: updatedBookmark.collection ?? current.collection
+          };
+
+          displayBookmark(current);
+          hideEditModal(true);
+        } catch (error) {
+          console.error("Failed to update bookmark:", error);
+          setEditError(error.message || "Failed to update bookmark.");
+        } finally {
+          editFormLoading = false;
+          hideLoading('editSave');
+          saveBtn.disabled = false;
+          cancelBtn.disabled = false;
+        }
+      }
+
+      async function confirmDeleteBookmark() {
+        if (!current) return;
+
+        hideDeleteModal();
+        const deleteBtn = document.getElementById("delete");
+        const editBtn = document.getElementById("edit");
+
+        showLoading('delete');
+        deleteBtn.disabled = true;
+        if (editBtn) {
+          editBtn.disabled = true;
+        }
+
+        try {
+          const res = await fetch(`/api/delete?id=${current._id}`);
+          if (!res.ok) {
+            throw new Error(`HTTP error! status: ${res.status}`);
         }
         const data = await res.json();
-        if (data.success) {
-          showSuccess("✅ Bookmark deleted! Loading new random bookmark...");
-          current = null;
-          // Automatically get a new random bookmark
-          setTimeout(() => getRandom(), 1500);
+          if (data.success) {
+            showSuccess("✅ Bookmark deleted! Loading new random bookmark...");
+            current = null;
+            if (editBtn) {
+              editBtn.disabled = true;
+            }
+            // Automatically get a new random bookmark
+            setTimeout(() => getRandom(), 1500);
+          }
+        } catch (error) {
+          console.error("Failed to delete bookmark:", error);
+          showError(`Failed to delete bookmark: ${error.message}`);
+          deleteBtn.disabled = false;
+          if (editBtn && current) {
+            editBtn.disabled = false;
+          }
+        } finally {
+          hideLoading('delete');
         }
-      } catch (error) {
-        console.error("Failed to delete bookmark:", error);
-        showError(`Failed to delete bookmark: ${error.message}`);
-        deleteBtn.disabled = false;
-      } finally {
-        hideLoading('delete');
       }
-    }
 
-    // Event listeners
-    document.getElementById("get").addEventListener("click", getRandom);
-    document.getElementById("delete").addEventListener("click", showDeleteModal);
-    document.getElementById("confirmDelete").addEventListener("click", confirmDeleteBookmark);
-    document.getElementById("cancelDelete").addEventListener("click", hideDeleteModal);
+      // Event listeners
+      document.getElementById("get").addEventListener("click", getRandom);
+      document.getElementById("delete").addEventListener("click", showDeleteModal);
+      document.getElementById("confirmDelete").addEventListener("click", confirmDeleteBookmark);
+      document.getElementById("cancelDelete").addEventListener("click", hideDeleteModal);
+      document.getElementById("edit").addEventListener("click", showEditModal);
+      document.getElementById("editForm").addEventListener("submit", handleEditSubmit);
+      document.getElementById("editCancel").addEventListener("click", hideEditModal);
 
     // Keyboard shortcuts
     document.addEventListener("keydown", function(e) {
@@ -713,6 +947,17 @@
         } else if (e.key === "Enter") {
           e.preventDefault();
           confirmDeleteBookmark();
+        }
+        return;
+      }
+
+      if (document.getElementById("editModal").style.display === "flex") {
+        if (e.key === "Escape") {
+          e.preventDefault();
+          hideEditModal();
+        } else if (e.key === "Enter" && !e.shiftKey) {
+          e.preventDefault();
+          handleEditSubmit(new Event("submit", { cancelable: true }));
         }
         return;
       }
@@ -734,6 +979,12 @@
     document.getElementById("confirmModal").addEventListener("click", function(e) {
       if (e.target === this) {
         hideDeleteModal();
+      }
+    });
+
+    document.getElementById("editModal").addEventListener("click", function(e) {
+      if (e.target === this) {
+        hideEditModal();
       }
     });
 
