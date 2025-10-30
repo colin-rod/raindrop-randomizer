@@ -971,6 +971,72 @@
       target.count = Math.max(0, currentCount - 1);
     }
 
+    function sanitizeCount(value) {
+      const numeric = Number(value);
+      return Number.isFinite(numeric) ? numeric : 0;
+    }
+
+    function decrementCount(value) {
+      return Math.max(0, sanitizeCount(value) - 1);
+    }
+
+    function resolveBookmarkCollectionId(bookmark) {
+      if (!bookmark) {
+        return null;
+      }
+      const resolved = bookmark.collectionId
+        ?? bookmark.collection?.$id
+        ?? bookmark.collection?._id;
+      return resolved != null ? String(resolved) : null;
+    }
+
+    function applyBookmarkRemovalToFilterStats(bookmark) {
+      if (!bookmark || filterStatsCache.size === 0) {
+        return;
+      }
+
+      const normalizedCollectionId = resolveBookmarkCollectionId(bookmark);
+      const now = Date.now();
+      const createdDate = bookmark.created ? new Date(bookmark.created) : null;
+      const createdTimestamp = createdDate && !Number.isNaN(createdDate.getTime())
+        ? createdDate.getTime()
+        : NaN;
+      const sevenDaysAgo = now - 7 * 24 * 60 * 60 * 1000;
+      const thirtyDaysAgo = now - 30 * 24 * 60 * 60 * 1000;
+
+      const isVideo = typeof bookmark.type === 'string' && bookmark.type.toLowerCase() === 'video';
+      const inLast7Days = Number.isFinite(createdTimestamp) && createdTimestamp >= sevenDaysAgo;
+      const inLast30Days = Number.isFinite(createdTimestamp) && createdTimestamp >= thirtyDaysAgo;
+
+      const keysToUpdate = [];
+      if (filterStatsCache.has('0')) {
+        keysToUpdate.push('0');
+      }
+      if (normalizedCollectionId && filterStatsCache.has(normalizedCollectionId)) {
+        keysToUpdate.push(normalizedCollectionId);
+      }
+
+      keysToUpdate.forEach(key => {
+        const stats = filterStatsCache.get(key);
+        if (!stats) {
+          return;
+        }
+
+        const updatedStats = {
+          totalItems: decrementCount(stats.totalItems),
+          videoItems: isVideo ? decrementCount(stats.videoItems) : sanitizeCount(stats.videoItems),
+          last7Days: inLast7Days ? decrementCount(stats.last7Days) : sanitizeCount(stats.last7Days),
+          last30Days: inLast30Days ? decrementCount(stats.last30Days) : sanitizeCount(stats.last30Days)
+        };
+
+        filterStatsCache.set(key, updatedStats);
+
+        if (String(selectedCollection ?? '0') === key) {
+          applyFilterCounts(updatedStats);
+        }
+      });
+    }
+
     function getCollectionsCache() {
       try {
         const cached = localStorage.getItem('raindrop_collections');
@@ -1440,6 +1506,9 @@
             showSuccess("✅ Bookmark deleted! Loading new random bookmark...");
             applyBookmarkRemovalToCache(current);
             refreshCollectionCounts();
+            applyBookmarkRemovalToFilterStats(current);
+            const activeCollectionId = selectedCollection != null ? selectedCollection : '0';
+            updateFilterCounts(activeCollectionId);
             current = null;
             if (editBtn) {
               editBtn.disabled = true;
