@@ -19,12 +19,13 @@
     }
     
     .container {
-      max-width: 100%;
+      max-width: min(1100px, 100%);
       margin: 0 auto;
       background: white;
       border-radius: 16px;
       box-shadow: 0 20px 40px rgba(0,0,0,0.15), 0 8px 16px rgba(0,0,0,0.1);
-      overflow: hidden;
+      display: grid;
+      grid-template-rows: auto 1fr;
     }
     
     .header {
@@ -33,6 +34,7 @@
       padding: 24px;
       text-align: center;
       box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+      border-radius: 16px 16px 0 0;
     }
     
     .header h1 {
@@ -41,11 +43,87 @@
       font-weight: 600;
     }
     
-    .controls {
+    .main-layout {
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
       padding: 24px;
+      background: linear-gradient(0deg, rgba(255,255,255,0) 0%, rgba(248,249,250,0.6) 100%);
+      border-radius: 0 0 16px 16px;
+    }
+
+    .controls {
       background: #f8f9fa;
-      border-bottom: 1px solid #dee2e6;
+      border: 1px solid #dee2e6;
+      border-radius: 16px;
       box-shadow: inset 0 -2px 4px rgba(0,0,0,0.05);
+    }
+
+    .bookmark-area {
+      min-height: 320px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .filters-panel {
+      border: none;
+      margin: 0;
+    }
+
+    .filters-summary {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      list-style: none;
+      cursor: pointer;
+      padding: 16px 24px;
+      font-weight: 600;
+      color: #212529;
+      background: rgba(255, 255, 255, 0.85);
+    }
+
+    .filters-summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .summary-text {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .summary-title {
+      font-size: 18px;
+    }
+
+    .summary-hint {
+      font-size: 14px;
+      font-weight: 400;
+      color: #6c757d;
+    }
+
+    .summary-icon {
+      width: 24px;
+      height: 24px;
+      border-radius: 9999px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: #343a40;
+      color: white;
+      font-size: 16px;
+      transition: transform 0.2s ease;
+    }
+
+    .filters-panel[open] .summary-icon {
+      transform: rotate(180deg);
+    }
+
+    .filters-content {
+      padding: 0 24px 24px;
+      border-top: 1px solid rgba(0, 0, 0, 0.05);
+      background: rgba(255, 255, 255, 0.9);
     }
     
     .form-group {
@@ -73,25 +151,84 @@
 
     @media (min-width: 768px) {
       .controls {
+        padding: 16px 24px 24px;
+        display: grid;
+        gap: 16px;
+      }
+
+      .filters-summary {
+        display: none;
+      }
+
+      .filters-content {
+        padding: 0;
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
         gap: 16px;
         align-items: end;
-        padding: 16px;
+        border-top: none;
+        background: transparent;
       }
 
-      .controls .form-group {
+      .filters-content .form-group {
         margin-bottom: 0;
       }
 
-      .controls .button-group,
-      .controls .keyboard-hint {
+      .actions,
+      .filters-content .keyboard-hint {
         grid-column: 1 / -1;
       }
 
-      .controls select {
+      .filters-content select {
         padding: 10px 14px;
         min-height: 42px;
+      }
+
+      .actions {
+        padding: 0;
+        background: transparent;
+      }
+    }
+
+    @media (min-width: 992px) {
+      .main-layout {
+        display: grid;
+        grid-template-columns: minmax(280px, 340px) minmax(0, 1fr);
+        align-items: start;
+        gap: 32px;
+      }
+
+      .controls {
+        position: sticky;
+        top: 24px;
+        align-self: start;
+        padding: 24px;
+        border-radius: 20px;
+        box-shadow: 0 24px 48px rgba(0,0,0,0.16);
+      }
+
+      .actions {
+        padding: 24px 0 0;
+        background: transparent;
+        border-top: 1px solid rgba(0, 0, 0, 0.08);
+        margin-top: 8px;
+        flex-wrap: nowrap;
+      }
+
+      .actions button {
+        flex: 1 1 auto;
+      }
+
+      .bookmark-area {
+        background: rgba(255, 255, 255, 0.95);
+        border-radius: 24px;
+        padding: 24px;
+        box-shadow: 0 32px 64px rgba(0,0,0,0.14);
+      }
+
+      #bookmark {
+        padding: 0;
+        background: transparent;
       }
     }
 
@@ -140,10 +277,12 @@
       border-color: #495057;
       box-shadow: 0 0 0 3px rgba(73, 80, 87, 0.15), 0 4px 8px rgba(0,0,0,0.15);
     }
-    
-    .button-group {
+
+    .actions {
       display: flex;
       gap: 12px;
+      padding: 16px 24px 24px;
+      background: rgba(255, 255, 255, 0.9);
       flex-wrap: wrap;
     }
     
@@ -215,6 +354,7 @@
     }
     
     #bookmark {
+      flex: 1 1 auto;
       padding: 24px;
       min-height: 300px;
       background: white;
@@ -457,32 +597,53 @@
       body {
         padding: 8px;
       }
-      
+
       .container {
         border-radius: 12px;
       }
-      
+
       .header {
         padding: 20px 16px;
       }
-      
+
       .header h1 {
         font-size: 24px;
       }
-      
+
       .controls {
-        padding: 20px 16px;
+        border-radius: 12px 12px 0 0;
       }
-      
-      .button-group {
-        flex-direction: column;
+
+      .filters-summary {
+        padding: 12px 16px;
       }
-      
-      button {
+
+      .filters-summary .summary-title {
+        font-size: 16px;
+      }
+
+      .filters-summary .summary-hint {
+        font-size: 13px;
+      }
+
+      .filters-content {
+        padding: 0 16px 16px;
+      }
+
+      .actions {
+        padding: 16px;
+        border-top: 1px solid rgba(0, 0, 0, 0.05);
+      }
+
+      .actions button {
         flex: none;
         min-width: 100%;
       }
-      
+
+      .keyboard-hint {
+        display: none;
+      }
+
       #bookmark {
         padding: 16px;
       }
@@ -511,74 +672,90 @@
   <div class="container">
     <div class="header">
       <h1>Random Raindrop</h1>
+      <p style="margin: 8px 0 0; font-size: 16px; font-weight: 400; opacity: 0.85;">Find a serendipitous read from your Raindrop collections.</p>
     </div>
-    
-    <div class="controls">
-      <div class="form-group">
-        <label for="collections">Choose a collection:</label>
-        <select id="collections" aria-label="Select bookmark collection">
-          <option value="0">All Collections</option>
-        </select>
-      </div>
-      
-      <div class="form-group">
-        <label for="lengthFilter">Article length:</label>
-        <select id="lengthFilter" aria-label="Filter by article length">
-          <option value="all">All Lengths</option>
-          <option value="short">📏 Short (1-2 min)</option>
-          <option value="medium">📏 Medium (3-6 min)</option>
-          <option value="long">📏 Long (7+ min)</option>
-        </select>
-      </div>
 
-      <div class="form-group">
-        <label for="contentFilter">Content type:</label>
-        <select id="contentFilter" aria-label="Filter by content type">
-          <option value="all">All content</option>
-          <option value="video">Video only</option>
-        </select>
-      </div>
-
-      <div class="form-group">
-        <label for="dateFilter">Date added:</label>
-        <select id="dateFilter" aria-label="Filter by bookmark creation date">
-          <option value="any">Any time</option>
-          <option value="last7">Last 7 days</option>
-          <option value="last30">Last 30 days</option>
-          <option value="custom">Custom range…</option>
-        </select>
-
-        <div id="customDateContainer" class="custom-date-range" aria-hidden="true">
-          <div class="date-input">
-            <label for="customStartDate">Start date</label>
-            <input type="date" id="customStartDate" name="customStartDate" aria-label="Custom start date" />
+    <div class="main-layout">
+      <div class="controls">
+        <details id="filtersPanel" class="filters-panel" open>
+          <summary class="filters-summary">
+            <span class="summary-text">
+              <span class="summary-title">Filters</span>
+              <span class="summary-hint">Tap or click to adjust filters</span>
+            </span>
+            <span class="summary-icon" aria-hidden="true">⌄</span>
+          </summary>
+          <div class="filters-content">
+          <div class="form-group">
+            <label for="collections">Choose a collection:</label>
+            <select id="collections" aria-label="Select bookmark collection">
+              <option value="0">All Collections</option>
+            </select>
           </div>
-          <div class="date-input">
-            <label for="customEndDate">End date (optional)</label>
-            <input type="date" id="customEndDate" name="customEndDate" aria-label="Custom end date" />
+
+          <div class="form-group">
+            <label for="lengthFilter">Article length:</label>
+            <select id="lengthFilter" aria-label="Filter by article length">
+              <option value="all">All Lengths</option>
+              <option value="short">📏 Short (1-2 min)</option>
+              <option value="medium">📏 Medium (3-6 min)</option>
+              <option value="long">📏 Long (7+ min)</option>
+            </select>
           </div>
+
+          <div class="form-group">
+            <label for="contentFilter">Content type:</label>
+            <select id="contentFilter" aria-label="Filter by content type">
+              <option value="all">All content</option>
+              <option value="video">Video only</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="dateFilter">Date added:</label>
+            <select id="dateFilter" aria-label="Filter by bookmark creation date">
+              <option value="any">Any time</option>
+              <option value="last7">Last 7 days</option>
+              <option value="last30">Last 30 days</option>
+              <option value="custom">Custom range…</option>
+            </select>
+
+            <div id="customDateContainer" class="custom-date-range" aria-hidden="true">
+              <div class="date-input">
+                <label for="customStartDate">Start date</label>
+                <input type="date" id="customStartDate" name="customStartDate" aria-label="Custom start date" />
+              </div>
+              <div class="date-input">
+                <label for="customEndDate">End date (optional)</label>
+                <input type="date" id="customEndDate" name="customEndDate" aria-label="Custom end date" />
+              </div>
+            </div>
+          </div>
+
+          <div class="keyboard-hint">
+            💡 Press <strong>Space</strong> for random, <strong>Delete</strong> to remove<br>
+            🎯 Use filters to find articles that match your available time or mood
+          </div>
+          </div>
+        </details>
+
+        <div class="actions" role="group" aria-label="Bookmark actions">
+          <button id="get" class="btn-primary" aria-label="Get random bookmark">
+            <span class="btn-text">Get Random</span>
+          </button>
+          <button id="edit" class="btn-secondary" disabled aria-label="Edit current bookmark">
+            <span class="btn-text">Edit</span>
+          </button>
+          <button id="delete" class="btn-danger" disabled aria-label="Delete current bookmark">
+            <span class="btn-text">Delete</span>
+          </button>
         </div>
       </div>
-      
-      <div class="button-group">
-        <button id="get" class="btn-primary" aria-label="Get random bookmark">
-          <span class="btn-text">Get Random</span>
-        </button>
-        <button id="edit" class="btn-secondary" disabled aria-label="Edit current bookmark">
-          <span class="btn-text">Edit</span>
-        </button>
-        <button id="delete" class="btn-danger" disabled aria-label="Delete current bookmark">
-          <span class="btn-text">Delete</span>
-        </button>
-      </div>
-      
-      <div class="keyboard-hint">
-        💡 Press <strong>Space</strong> for random, <strong>Delete</strong> to remove<br>
-        🎯 Use filters to find articles that match your available time or mood
+
+      <div class="bookmark-area">
+        <div id="bookmark" role="main" aria-live="polite"></div>
       </div>
     </div>
-
-    <div id="bookmark" role="main" aria-live="polite"></div>
   </div>
   
   <div id="confirmModal" class="modal" style="display: none;" role="dialog" aria-labelledby="modalTitle" aria-modal="true">
@@ -638,6 +815,49 @@
     const numberFormatter = typeof Intl !== 'undefined' && typeof Intl.NumberFormat === 'function'
       ? new Intl.NumberFormat()
       : null;
+
+    function setupResponsiveFilters() {
+      const filtersPanel = document.getElementById("filtersPanel");
+      if (!filtersPanel || typeof window === "undefined" || typeof window.matchMedia !== "function") {
+        return;
+      }
+
+      const mobileQuery = window.matchMedia("(max-width: 768px)");
+      const summary = filtersPanel.querySelector(".filters-summary");
+      let userToggledOnMobile = false;
+
+      if (summary) {
+        summary.addEventListener("click", () => {
+          if (mobileQuery.matches) {
+            userToggledOnMobile = true;
+          }
+        });
+      }
+
+      const applyState = (matches) => {
+        if (matches) {
+          if (!userToggledOnMobile) {
+            filtersPanel.open = false;
+          }
+        } else {
+          filtersPanel.open = true;
+          userToggledOnMobile = false;
+        }
+      };
+
+      applyState(mobileQuery.matches);
+
+      const handleChange = (event) => {
+        const matches = typeof event.matches === "boolean" ? event.matches : mobileQuery.matches;
+        applyState(matches);
+      };
+
+      if (typeof mobileQuery.addEventListener === "function") {
+        mobileQuery.addEventListener("change", handleChange);
+      } else if (typeof mobileQuery.addListener === "function") {
+        mobileQuery.addListener(handleChange);
+      }
+    }
 
     function formatCount(value) {
       const numeric = Number(value);
@@ -1593,6 +1813,7 @@
     });
 
     // Initialize app
+    setupResponsiveFilters();
     loadCollections();
   </script>
 </body>
