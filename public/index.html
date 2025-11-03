@@ -43,26 +43,11 @@
       font-weight: 600;
     }
     
-    .main-layout {
-      display: flex;
-      flex-direction: column;
-      gap: 24px;
-      padding: 24px;
-      background: linear-gradient(0deg, rgba(255,255,255,0) 0%, rgba(248,249,250,0.6) 100%);
-      border-radius: 0 0 16px 16px;
-    }
-
     .controls {
       background: #f8f9fa;
       border: 1px solid #dee2e6;
       border-radius: 16px;
       box-shadow: inset 0 -2px 4px rgba(0,0,0,0.05);
-    }
-
-    .bookmark-area {
-      min-height: 320px;
-      display: flex;
-      flex-direction: column;
     }
 
     .filters-panel {
@@ -185,48 +170,6 @@
       }
 
       .actions {
-        padding: 0;
-        background: transparent;
-      }
-    }
-
-    @media (min-width: 992px) {
-      .main-layout {
-        display: grid;
-        grid-template-columns: minmax(280px, 340px) minmax(0, 1fr);
-        align-items: start;
-        gap: 32px;
-      }
-
-      .controls {
-        position: sticky;
-        top: 24px;
-        align-self: start;
-        padding: 24px;
-        border-radius: 20px;
-        box-shadow: 0 24px 48px rgba(0,0,0,0.16);
-      }
-
-      .actions {
-        padding: 24px 0 0;
-        background: transparent;
-        border-top: 1px solid rgba(0, 0, 0, 0.08);
-        margin-top: 8px;
-        flex-wrap: nowrap;
-      }
-
-      .actions button {
-        flex: 1 1 auto;
-      }
-
-      .bookmark-area {
-        background: rgba(255, 255, 255, 0.95);
-        border-radius: 24px;
-        padding: 24px;
-        box-shadow: 0 32px 64px rgba(0,0,0,0.14);
-      }
-
-      #bookmark {
         padding: 0;
         background: transparent;
       }
@@ -674,18 +617,17 @@
       <h1>Random Raindrop</h1>
       <p style="margin: 8px 0 0; font-size: 16px; font-weight: 400; opacity: 0.85;">Find a serendipitous read from your Raindrop collections.</p>
     </div>
-
-    <div class="main-layout">
-      <div class="controls">
-        <details id="filtersPanel" class="filters-panel" open>
-          <summary class="filters-summary">
-            <span class="summary-text">
-              <span class="summary-title">Filters</span>
-              <span class="summary-hint">Tap or click to adjust filters</span>
-            </span>
-            <span class="summary-icon" aria-hidden="true">⌄</span>
-          </summary>
-          <div class="filters-content">
+    
+    <div class="controls">
+      <details id="filtersPanel" class="filters-panel" open>
+        <summary class="filters-summary">
+          <span class="summary-text">
+            <span class="summary-title">Filters</span>
+            <span class="summary-hint">Tap to adjust filters</span>
+          </span>
+          <span class="summary-icon" aria-hidden="true">⌄</span>
+        </summary>
+        <div class="filters-content">
           <div class="form-group">
             <label for="collections">Choose a collection:</label>
             <select id="collections" aria-label="Select bookmark collection">
@@ -736,7 +678,6 @@
             💡 Press <strong>Space</strong> for random, <strong>Delete</strong> to remove<br>
             🎯 Use filters to find articles that match your available time or mood
           </div>
-          </div>
         </details>
 
         <div class="actions" role="group" aria-label="Bookmark actions">
@@ -750,10 +691,18 @@
             <span class="btn-text">Delete</span>
           </button>
         </div>
-      </div>
+      </details>
 
-      <div class="bookmark-area">
-        <div id="bookmark" role="main" aria-live="polite"></div>
+      <div class="actions" role="group" aria-label="Bookmark actions">
+        <button id="get" class="btn-primary" aria-label="Get random bookmark">
+          <span class="btn-text">Get Random</span>
+        </button>
+        <button id="edit" class="btn-secondary" disabled aria-label="Edit current bookmark">
+          <span class="btn-text">Edit</span>
+        </button>
+        <button id="delete" class="btn-danger" disabled aria-label="Delete current bookmark">
+          <span class="btn-text">Delete</span>
+        </button>
       </div>
     </div>
   </div>
