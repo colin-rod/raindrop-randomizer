@@ -27,6 +27,19 @@
       display: grid;
       grid-template-rows: auto 1fr;
     }
+
+    .content {
+      display: grid;
+      grid-template-columns: minmax(280px, 360px) 1fr;
+      gap: 24px;
+      padding: 24px;
+    }
+
+    @media (max-width: 1024px) {
+      .content {
+        grid-template-columns: 1fr;
+      }
+    }
     
     .header {
       background: linear-gradient(135deg, #495057 0%, #343a40 100%);
@@ -302,12 +315,28 @@
       min-height: 300px;
       background: white;
     }
-    
+
     #bookmark.loading {
       display: flex;
       align-items: center;
       justify-content: center;
       color: #6b7280;
+    }
+
+    .bookmark-placeholder {
+      height: 100%;
+      min-height: inherit;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      color: #6c757d;
+      font-size: 18px;
+      background: transparent;
+    }
+
+    .bookmark-placeholder__message {
+      margin: 0;
     }
     
     .bookmark-card {
@@ -541,6 +570,11 @@
         padding: 8px;
       }
 
+      .content {
+        grid-template-columns: 1fr;
+        padding: 16px;
+      }
+
       .container {
         border-radius: 12px;
       }
@@ -590,7 +624,11 @@
       #bookmark {
         padding: 16px;
       }
-      
+
+      .bookmark-placeholder {
+        font-size: 16px;
+      }
+
       .bookmark-title {
         font-size: 20px;
       }
@@ -617,81 +655,89 @@
       <h1>Random Raindrop</h1>
       <p style="margin: 8px 0 0; font-size: 16px; font-weight: 400; opacity: 0.85;">Find a serendipitous read from your Raindrop collections.</p>
     </div>
-    
-    <div class="controls">
-      <details id="filtersPanel" class="filters-panel" open>
-        <summary class="filters-summary">
-          <span class="summary-text">
-            <span class="summary-title">Filters</span>
-            <span class="summary-hint">Tap to adjust filters</span>
-          </span>
-          <span class="summary-icon" aria-hidden="true">⌄</span>
-        </summary>
-        <div class="filters-content">
-          <div class="form-group">
-            <label for="collections">Choose a collection:</label>
-            <select id="collections" aria-label="Select bookmark collection">
-              <option value="0">All Collections</option>
-            </select>
-          </div>
 
-          <div class="form-group">
-            <label for="lengthFilter">Article length:</label>
-            <select id="lengthFilter" aria-label="Filter by article length">
-              <option value="all">All Lengths</option>
-              <option value="short">📏 Short (1-2 min)</option>
-              <option value="medium">📏 Medium (3-6 min)</option>
-              <option value="long">📏 Long (7+ min)</option>
-            </select>
-          </div>
+    <div class="content">
+      <div class="controls">
+        <details id="filtersPanel" class="filters-panel" open>
+          <summary class="filters-summary">
+            <span class="summary-text">
+              <span class="summary-title">Filters</span>
+              <span class="summary-hint">Tap to adjust filters</span>
+            </span>
+            <span class="summary-icon" aria-hidden="true">⌄</span>
+          </summary>
+          <div class="filters-content">
+            <div class="form-group">
+              <label for="collections">Choose a collection:</label>
+              <select id="collections" aria-label="Select bookmark collection">
+                <option value="0">All Collections</option>
+              </select>
+            </div>
 
-          <div class="form-group">
-            <label for="contentFilter">Content type:</label>
-            <select id="contentFilter" aria-label="Filter by content type">
-              <option value="all">All content</option>
-              <option value="video">Video only</option>
-            </select>
-          </div>
+            <div class="form-group">
+              <label for="lengthFilter">Article length:</label>
+              <select id="lengthFilter" aria-label="Filter by article length">
+                <option value="all">All Lengths</option>
+                <option value="short">📏 Short (1-2 min)</option>
+                <option value="medium">📏 Medium (3-6 min)</option>
+                <option value="long">📏 Long (7+ min)</option>
+              </select>
+            </div>
 
-          <div class="form-group">
-            <label for="dateFilter">Date added:</label>
-            <select id="dateFilter" aria-label="Filter by bookmark creation date">
-              <option value="any">Any time</option>
-              <option value="last7">Last 7 days</option>
-              <option value="last30">Last 30 days</option>
-              <option value="custom">Custom range…</option>
-            </select>
+            <div class="form-group">
+              <label for="contentFilter">Content type:</label>
+              <select id="contentFilter" aria-label="Filter by content type">
+                <option value="all">All content</option>
+                <option value="video">Video only</option>
+              </select>
+            </div>
 
-            <div id="customDateContainer" class="custom-date-range" aria-hidden="true">
-              <div class="date-input">
-                <label for="customStartDate">Start date</label>
-                <input type="date" id="customStartDate" name="customStartDate" aria-label="Custom start date" />
+            <div class="form-group">
+              <label for="dateFilter">Date added:</label>
+              <select id="dateFilter" aria-label="Filter by bookmark creation date">
+                <option value="any">Any time</option>
+                <option value="last7">Last 7 days</option>
+                <option value="last30">Last 30 days</option>
+                <option value="custom">Custom range…</option>
+              </select>
+
+              <div id="customDateContainer" class="custom-date-range" aria-hidden="true">
+                <div class="date-input">
+                  <label for="customStartDate">Start date</label>
+                  <input type="date" id="customStartDate" name="customStartDate" aria-label="Custom start date" />
+                </div>
+                <div class="date-input">
+                  <label for="customEndDate">End date (optional)</label>
+                  <input type="date" id="customEndDate" name="customEndDate" aria-label="Custom end date" />
+                </div>
               </div>
-              <div class="date-input">
-                <label for="customEndDate">End date (optional)</label>
-                <input type="date" id="customEndDate" name="customEndDate" aria-label="Custom end date" />
-              </div>
+            </div>
+
+            <div class="keyboard-hint">
+              💡 Press <strong>Space</strong> for random, <strong>Delete</strong> to remove<br>
+              🎯 Use filters to find articles that match your available time or mood
             </div>
           </div>
 
-          <div class="keyboard-hint">
-            💡 Press <strong>Space</strong> for random, <strong>Delete</strong> to remove<br>
-            🎯 Use filters to find articles that match your available time or mood
+          <div class="actions" role="group" aria-label="Bookmark actions">
+            <button id="get" class="btn-primary" aria-label="Get random bookmark">
+              <span class="btn-text">Get Random</span>
+            </button>
+            <button id="edit" class="btn-secondary" disabled aria-label="Edit current bookmark">
+              <span class="btn-text">Edit</span>
+            </button>
+            <button id="delete" class="btn-danger" disabled aria-label="Delete current bookmark">
+              <span class="btn-text">Delete</span>
+            </button>
           </div>
-        </div>
+        </details>
+      </div>
 
-        <div class="actions" role="group" aria-label="Bookmark actions">
-          <button id="get" class="btn-primary" aria-label="Get random bookmark">
-            <span class="btn-text">Get Random</span>
-          </button>
-          <button id="edit" class="btn-secondary" disabled aria-label="Edit current bookmark">
-            <span class="btn-text">Edit</span>
-          </button>
-          <button id="delete" class="btn-danger" disabled aria-label="Delete current bookmark">
-            <span class="btn-text">Delete</span>
-          </button>
+      <main id="bookmark" role="region" aria-live="polite" aria-busy="false">
+        <div class="bookmark-placeholder">
+          <p class="bookmark-placeholder__message">Ready when you are! Choose your filters and press <strong>Get Random</strong> to load a bookmark.</p>
         </div>
-      </details>
+      </main>
     </div>
   </div>
   
@@ -954,15 +1000,29 @@
     // Utility functions
     function showLoading(elementId) {
       const element = document.getElementById(elementId);
+      if (!element) {
+        console.warn(`showLoading: element with id "${elementId}" was not found.`);
+        return;
+      }
+
       element.classList.add('loading');
       if (elementId === 'bookmark') {
+        element.setAttribute('aria-busy', 'true');
         element.innerHTML = '<div>Loading...</div>';
       }
     }
 
     function hideLoading(elementId) {
       const element = document.getElementById(elementId);
+      if (!element) {
+        console.warn(`hideLoading: element with id "${elementId}" was not found.`);
+        return;
+      }
+
       element.classList.remove('loading');
+      if (elementId === 'bookmark') {
+        element.setAttribute('aria-busy', 'false');
+      }
     }
 
     function showError(message, retry = false) {
@@ -972,7 +1032,13 @@
         displayMessage = `${message} (video filter enabled — try switching back to \"All content\".)`;
       }
       const retryBtn = retry ? `<button onclick="getRandom()" style="margin-top: 12px; padding: 8px 16px; background: #495057; color: white; border: none; border-radius: 6px; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">Try Again</button>` : '';
-      document.getElementById("bookmark").innerHTML = `
+      const bookmarkEl = document.getElementById("bookmark");
+      if (!bookmarkEl) {
+        console.error('Unable to display error message because the bookmark container is missing.');
+        return;
+      }
+      bookmarkEl.setAttribute('aria-busy', 'false');
+      bookmarkEl.innerHTML = `
         <div class="error-message">
           <strong>Error:</strong> ${displayMessage}
           ${retryBtn}
@@ -981,7 +1047,13 @@
     }
 
     function showSuccess(message) {
-      document.getElementById("bookmark").innerHTML = `
+      const bookmarkEl = document.getElementById("bookmark");
+      if (!bookmarkEl) {
+        console.error('Unable to display success message because the bookmark container is missing.');
+        return;
+      }
+      bookmarkEl.setAttribute('aria-busy', 'false');
+      bookmarkEl.innerHTML = `
         <div class="success-message">
           ${message}
         </div>
@@ -1473,7 +1545,14 @@
       const metaBadges = [lengthBadge, timestampBadge].filter(Boolean).join('');
       const metaSection = metaBadges ? `<div class="bookmark-meta-info">${metaBadges}</div>` : '';
 
-        document.getElementById("bookmark").innerHTML = `
+        const bookmarkEl = document.getElementById("bookmark");
+        if (!bookmarkEl) {
+          console.error('Unable to render bookmark because the bookmark container is missing.');
+          return;
+        }
+
+        bookmarkEl.setAttribute('aria-busy', 'false');
+        bookmarkEl.innerHTML = `
           <div class="bookmark-card">
             <h2 class="bookmark-title"><a href="${data.link}" target="_blank" rel="noopener noreferrer">${data.title || 'Untitled'}</a></h2>
             ${metaSection}
