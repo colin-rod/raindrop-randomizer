@@ -61,6 +61,8 @@
       border: 1px solid #dee2e6;
       border-radius: 16px;
       box-shadow: inset 0 -2px 4px rgba(0,0,0,0.05);
+      display: flex;
+      flex-direction: column;
     }
 
     .filters-panel {
@@ -78,7 +80,8 @@
       padding: 16px 24px;
       font-weight: 600;
       color: #212529;
-      background: rgba(255, 255, 255, 0.85);
+      background: rgba(255, 255, 255, 0.92);
+      border-bottom: 1px solid rgba(0, 0, 0, 0.05);
     }
 
     .filters-summary::-webkit-details-marker {
@@ -120,7 +123,6 @@
 
     .filters-content {
       padding: 0 24px 24px;
-      border-top: 1px solid rgba(0, 0, 0, 0.05);
       background: rgba(255, 255, 255, 0.9);
     }
     
@@ -148,23 +150,16 @@
     }
 
     @media (min-width: 768px) {
-      .controls {
-        padding: 16px 24px 24px;
-        display: grid;
-        gap: 16px;
-      }
-
       .filters-summary {
-        display: none;
+        padding: 20px 28px;
       }
 
       .filters-content {
-        padding: 0;
+        padding: 0 28px 28px;
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
         gap: 16px;
         align-items: end;
-        border-top: none;
         background: transparent;
       }
 
@@ -172,21 +167,9 @@
         margin-bottom: 0;
       }
 
-      .actions,
-      .filters-content .keyboard-hint {
-        grid-column: 1 / -1;
-      }
-
       .filters-content select {
         padding: 10px 14px;
         min-height: 42px;
-      }
-
-      .actions {
-        padding: 0;
-        background: transparent;
-        border-top: none;
-        border-radius: 0;
       }
     }
 
@@ -237,17 +220,16 @@
     }
 
     .actions {
-      display: flex;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
       gap: 12px;
       padding: 16px 24px 24px;
       background: rgba(255, 255, 255, 0.9);
-      flex-wrap: wrap;
       border-top: 1px solid rgba(0, 0, 0, 0.05);
       border-radius: 0 0 16px 16px;
     }
     
     button {
-      flex: 1;
       min-width: 120px;
       padding: 12px 24px;
       border: none;
@@ -259,6 +241,15 @@
       min-height: 44px;
       position: relative;
       overflow: hidden;
+    }
+
+    .actions button {
+      width: 100%;
+      min-width: 0;
+    }
+
+    .modal-buttons button {
+      flex: 1;
     }
     
     .btn-primary {
@@ -614,11 +605,11 @@
       .actions {
         padding: 16px;
         border-radius: 0 0 12px 12px;
+        grid-template-columns: 1fr;
       }
 
       .actions button {
-        flex: none;
-        min-width: 100%;
+        width: 100%;
       }
 
       .keyboard-hint {
@@ -666,7 +657,7 @@
           <summary class="filters-summary">
             <span class="summary-text">
               <span class="summary-title">Filters</span>
-              <span class="summary-hint">Tap to adjust filters</span>
+              <span class="summary-hint">Show or hide filters</span>
             </span>
             <span class="summary-icon" aria-hidden="true">⌄</span>
           </summary>
