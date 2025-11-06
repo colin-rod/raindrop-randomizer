@@ -414,6 +414,32 @@
       margin-bottom: 16px;
     }
 
+    .bookmark-actions {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 12px;
+      margin-top: 24px;
+    }
+
+    .bookmark-actions .bookmark-link {
+      flex: 0 0 auto;
+      justify-content: center;
+    }
+
+    .bookmark-secondary-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      flex: 1 1 auto;
+      justify-content: flex-end;
+    }
+
+    .bookmark-secondary-actions button {
+      flex: 0 1 140px;
+      min-width: 140px;
+    }
+
     .length-badge {
       display: inline-flex;
       align-items: center;
@@ -612,6 +638,25 @@
         width: 100%;
       }
 
+      .bookmark-actions {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .bookmark-actions .bookmark-link {
+        width: 100%;
+      }
+
+      .bookmark-secondary-actions {
+        width: 100%;
+      }
+
+      .bookmark-secondary-actions button {
+        flex: 1 1 auto;
+        min-width: 0;
+        width: 100%;
+      }
+
       .keyboard-hint {
         display: none;
       }
@@ -792,6 +837,42 @@
     const numberFormatter = typeof Intl !== 'undefined' && typeof Intl.NumberFormat === 'function'
       ? new Intl.NumberFormat()
       : null;
+    const actionsContainer = document.querySelector(".actions");
+    const editButton = document.getElementById("edit");
+    const deleteButton = document.getElementById("delete");
+
+    function resetActionButtonPlacement() {
+      if (!actionsContainer) {
+        return;
+      }
+
+      if (editButton && !actionsContainer.contains(editButton)) {
+        actionsContainer.appendChild(editButton);
+      }
+
+      if (deleteButton && !actionsContainer.contains(deleteButton)) {
+        actionsContainer.appendChild(deleteButton);
+      }
+    }
+
+    function moveActionButtonsToCard() {
+      if (!editButton && !deleteButton) {
+        return;
+      }
+
+      const secondaryActions = document.querySelector("#bookmark .bookmark-secondary-actions");
+      if (!secondaryActions) {
+        return;
+      }
+
+      if (editButton) {
+        secondaryActions.appendChild(editButton);
+      }
+
+      if (deleteButton) {
+        secondaryActions.appendChild(deleteButton);
+      }
+    }
 
     function setupResponsiveFilters() {
       const filtersPanel = document.getElementById("filtersPanel");
@@ -1002,6 +1083,7 @@
       element.classList.add('loading');
       if (elementId === 'bookmark') {
         element.setAttribute('aria-busy', 'true');
+        resetActionButtonPlacement();
         element.innerHTML = '<div>Loading...</div>';
       }
     }
@@ -1032,6 +1114,7 @@
         return;
       }
       bookmarkEl.setAttribute('aria-busy', 'false');
+      resetActionButtonPlacement();
       bookmarkEl.innerHTML = `
         <div class="error-message">
           <strong>Error:</strong> ${displayMessage}
@@ -1047,6 +1130,7 @@
         return;
       }
       bookmarkEl.setAttribute('aria-busy', 'false');
+      resetActionButtonPlacement();
       bookmarkEl.innerHTML = `
         <div class="success-message">
           ${message}
@@ -1546,6 +1630,7 @@
         }
 
         bookmarkEl.setAttribute('aria-busy', 'false');
+        resetActionButtonPlacement();
         bookmarkEl.innerHTML = `
           <div class="bookmark-card">
             <h2 class="bookmark-title"><a href="${data.link}" target="_blank" rel="noopener noreferrer">${data.title || 'Untitled'}</a></h2>
@@ -1555,11 +1640,15 @@
               ${data.note ? `<p><strong>Note:</strong> ${data.note}</p>` : ""}
             </div>
             ${tags}
-            <a href="${data.link}" target="_blank" class="bookmark-link" rel="noopener noreferrer">
-              📖 Read Original
-            </a>
+            <div class="bookmark-actions">
+              <a href="${data.link}" target="_blank" class="bookmark-link" rel="noopener noreferrer">
+                📖 Read Original
+              </a>
+              <div class="bookmark-secondary-actions" role="group" aria-label="Additional bookmark actions"></div>
+            </div>
           </div>
         `;
+        moveActionButtonsToCard();
 
         const editBtn = document.getElementById("edit");
         if (editBtn) {
