@@ -4,9 +4,8 @@ import fetch from "node-fetch";
  * Supported query parameters:
  *  - collectionId (required): Raindrop collection identifier ("0" for all collections)
  *  - lengthFilter (optional): "all" | "short" | "medium" | "long"
- *  - typeFilter (optional): "all" | "video"
+ *  - typeFilter (optional): comma-separated content filters: "all", "video", "unsorted"
  *  - tagFilter (optional): case-insensitive tag value to match
- *  - typeFilter (optional): "all" | "video" | "unsorted"
  *  - dateFilter (optional): "any" | "last7" | "last30" | "custom"
  *  - startDate / endDate (optional): ISO date strings used with dateFilter=custom
  *  - addedAfter / addedBefore (optional aliases for startDate/endDate)
@@ -98,11 +97,28 @@ export default async function handler(req, res) {
   const isLengthFilterActive = Boolean(lengthFilter && lengthFilter !== 'all');
   const normalizedLength = lengthFilter ? lengthFilter.toLowerCase() : 'all';
 
-  const normalizedType = (typeFilter || 'all').toLowerCase();
-  if (!['all', 'video', 'unsorted'].includes(normalizedType)) {
+  const parseTypeFilters = (value) => {
+    if (Array.isArray(value)) {
+      return value
+        .flatMap(entry => String(entry || '').split(','))
+        .map(entry => entry.trim().toLowerCase())
+        .filter(Boolean);
+    }
+    return String(value || '')
+      .split(',')
+      .map(entry => entry.trim().toLowerCase())
+      .filter(Boolean);
+  };
+
+  const requestedTypeFilters = parseTypeFilters(typeFilter);
+  const hasAllTypeFilter = requestedTypeFilters.includes('all');
+  const normalizedTypeFilters = [...new Set(requestedTypeFilters.filter(value => value !== 'all'))];
+
+  if (normalizedTypeFilters.some(value => !['video', 'unsorted'].includes(value))) {
     return res.status(400).json({ error: `Unsupported typeFilter value: ${typeFilter}` });
   }
-  const isContentFilterActive = normalizedType !== 'all';
+
+  const isContentFilterActive = normalizedTypeFilters.length > 0 && !hasAllTypeFilter;
 
   let filteredBookmarks = enrichedBookmarks;
   if (isLengthFilterActive) {
@@ -113,12 +129,15 @@ export default async function handler(req, res) {
 
   if (isContentFilterActive) {
     filteredBookmarks = filteredBookmarks.filter(bookmark => {
-      if (normalizedType === 'video') {
-        return (bookmark.type || '').toLowerCase() === 'video';
+      const isVideo = (bookmark.type || '').toLowerCase() === 'video';
+      const collectionId = bookmark.collection?.$id ?? bookmark.collection?._id ?? bookmark.collectionId;
+      const isUnsorted = Number(collectionId) === -1;
+
+      if (normalizedTypeFilters.includes('video') && !isVideo) {
+        return false;
       }
-      if (normalizedType === 'unsorted') {
-        const collectionId = bookmark.collection?.$id ?? bookmark.collection?._id ?? bookmark.collectionId;
-        return Number(collectionId) === -1;
+      if (normalizedTypeFilters.includes('unsorted') && !isUnsorted) {
+        return false;
       }
       return true;
     });
@@ -221,10 +240,15 @@ export default async function handler(req, res) {
       return res.status(200).json({ error: `No ${lengthFilter} articles found in this collection` });
     }
     if (isContentFilterActive) {
-      if (normalizedType === 'video') {
+      const hasVideoFilter = normalizedTypeFilters.includes('video');
+      const hasUnsortedFilter = normalizedTypeFilters.includes('unsorted');
+      if (hasVideoFilter && hasUnsortedFilter) {
+        return res.status(200).json({ error: 'No unsorted video bookmarks available with both filters enabled' });
+      }
+      if (hasVideoFilter) {
         return res.status(200).json({ error: 'No video bookmarks available with the video filter enabled' });
       }
-      if (normalizedType === 'unsorted') {
+      if (hasUnsortedFilter) {
         return res.status(200).json({ error: 'No unsorted bookmarks available with the unsorted filter enabled' });
       }
       return res.status(200).json({ error: 'No bookmarks available with the selected content filter enabled' });
