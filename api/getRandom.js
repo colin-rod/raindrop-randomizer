@@ -4,6 +4,8 @@ import fetch from "node-fetch";
  * Supported query parameters:
  *  - collectionId (required): Raindrop collection identifier ("0" for all collections)
  *  - lengthFilter (optional): "all" | "short" | "medium" | "long"
+ *  - typeFilter (optional): "all" | "video"
+ *  - tagFilter (optional): case-insensitive tag value to match
  *  - typeFilter (optional): "all" | "video" | "unsorted"
  *  - dateFilter (optional): "any" | "last7" | "last30" | "custom"
  *  - startDate / endDate (optional): ISO date strings used with dateFilter=custom
@@ -15,6 +17,7 @@ export default async function handler(req, res) {
     collectionId,
     lengthFilter,
     typeFilter,
+    tagFilter,
     dateFilter,
     startDate,
     endDate,
@@ -121,6 +124,18 @@ export default async function handler(req, res) {
     });
   }
 
+  const normalizedTagFilter = (tagFilter || '').trim().toLowerCase();
+  const isTagFilterActive = normalizedTagFilter.length > 0;
+
+  if (isTagFilterActive) {
+    filteredBookmarks = filteredBookmarks.filter(bookmark =>
+      Array.isArray(bookmark.tags) &&
+      bookmark.tags.some(tag =>
+        typeof tag === 'string' && tag.toLowerCase() === normalizedTagFilter
+      )
+    );
+  }
+
   const now = new Date();
   let rangeStart = null;
   let rangeEnd = null;
@@ -213,6 +228,9 @@ export default async function handler(req, res) {
         return res.status(200).json({ error: 'No unsorted bookmarks available with the unsorted filter enabled' });
       }
       return res.status(200).json({ error: 'No bookmarks available with the selected content filter enabled' });
+    }
+    if (isTagFilterActive) {
+      return res.status(200).json({ error: `No bookmarks found with tag "${tagFilter}"` });
     }
     return res.status(200).json({ error: 'No bookmarks available' });
   }
