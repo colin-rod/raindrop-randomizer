@@ -5,7 +5,7 @@ Raindrop Randomizer is a lightweight Vercel application that helps you discover 
 ## Features
 
 - Fetches your Raindrop.io collections and displays the saved item counts.
-- Returns a single random bookmark from a chosen collection with optional filters for length, media type, and date range.
+- Returns a single random bookmark from a chosen collection with optional filters for length, media type, tag, and date range.
 - Provides quick statistics that show how many items match common filters (videos, saved in the last 7 or 30 days, etc.).
 - Allows updating bookmark metadata or deleting the bookmark directly through the API routes.
 
@@ -50,7 +50,7 @@ All API routes live inside the [`api/`](api) directory and forward requests to t
 | Route | Method | Description |
 | --- | --- | --- |
 | `/api/getCollections` | `GET` | Lists all Raindrop collections with their item counts. |
-| `/api/getRandom` | `GET` | Returns a random bookmark from the specified collection. Supports optional filters such as `lengthFilter`, `typeFilter`, `dateFilter`, and custom `startDate`/`endDate`. |
+| `/api/getRandom` | `GET` | Returns a random bookmark from the specified collection. Supports optional filters such as `lengthFilter`, `typeFilter`, `tagFilter`, `dateFilter`, and custom `startDate`/`endDate`. |
 | `/api/getFilterStats` | `GET` | Computes helper statistics (total items, videos, last 7/30 days) for the selected collection. |
 | `/api/update` | `POST` | Updates bookmark metadata (title, tags, target collection). Expect a JSON body containing at least `id` and `title`. |
 | `/api/delete` | `DELETE` | Deletes a bookmark by `id`. |
