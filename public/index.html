@@ -459,6 +459,12 @@
       margin: 0;
     }
 
+    .collection-badge {
+      background: #ede7ff;
+      color: #452f8c;
+      border: 1px solid #d8ccff;
+    }
+
     .meta-badge__detail {
       font-weight: 500;
       font-size: 12px;
@@ -1219,6 +1225,29 @@
       return resolved != null ? String(resolved) : null;
     }
 
+    function resolveBookmarkCollectionTitle(bookmark) {
+      if (!bookmark) {
+        return null;
+      }
+
+      const nestedTitle = bookmark.collection?.title;
+      if (typeof nestedTitle === 'string' && nestedTitle.trim()) {
+        return nestedTitle.trim();
+      }
+
+      const collectionId = resolveBookmarkCollectionId(bookmark);
+      if (collectionId === '-1') {
+        return 'Unsorted';
+      }
+
+      if (!collectionId || !Array.isArray(collectionsCache)) {
+        return null;
+      }
+
+      const matchedCollection = collectionsCache.find(collection => String(collection.id) === collectionId);
+      return matchedCollection?.title || null;
+    }
+
     function applyBookmarkRemovalToFilterStats(bookmark) {
       if (!bookmark || filterStatsCache.size === 0) {
         return;
@@ -1544,7 +1573,14 @@
            </time>`
         : '';
 
-      const metaBadges = [lengthBadge, timestampBadge].filter(Boolean).join('');
+      const collectionTitle = resolveBookmarkCollectionTitle(data);
+      const collectionBadge = collectionTitle
+        ? `<div class="meta-badge collection-badge" title="Collection">
+             🗂️ ${collectionTitle}
+           </div>`
+        : '';
+
+      const metaBadges = [lengthBadge, timestampBadge, collectionBadge].filter(Boolean).join('');
       const metaSection = metaBadges ? `<div class="bookmark-meta-info">${metaBadges}</div>` : '';
 
         const bookmarkEl = document.getElementById("bookmark");
