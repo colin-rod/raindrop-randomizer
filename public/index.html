@@ -129,6 +129,13 @@
     .form-group {
       margin-bottom: 16px;
     }
+
+    .field-help {
+      margin: 8px 0 0;
+      font-size: 13px;
+      color: #6c757d;
+      line-height: 1.35;
+    }
     
     label {
       display: block;
@@ -684,7 +691,9 @@
               <select id="contentFilter" aria-label="Filter by content type">
                 <option value="all">All content</option>
                 <option value="video">Video only</option>
+                <option value="unsorted">Unsorted only</option>
               </select>
+              <p class="field-help">Use <strong>Unsorted only</strong> to pull bookmarks from your Raindrop unsorted inbox.</p>
             </div>
 
             <div class="form-group">
@@ -898,6 +907,7 @@
       if (contentSelect) {
         const totalItems = hasStats ? formatCount(stats.totalItems) : null;
         const videoItems = hasStats ? formatCount(stats.videoItems) : null;
+        const unsortedItems = hasStats ? formatCount(stats.unsortedItems) : null;
 
         Array.from(contentSelect.options).forEach(option => {
           const defaultLabel = option.dataset.defaultLabel || defaultContentFilterLabels[option.value];
@@ -912,6 +922,8 @@
             option.textContent = `${defaultLabel} (${totalItems})`;
           } else if (option.value === 'video') {
             option.textContent = `${defaultLabel} (${videoItems})`;
+          } else if (option.value === 'unsorted') {
+            option.textContent = `${defaultLabel} (${unsortedItems})`;
           } else {
             option.textContent = defaultLabel;
           }
@@ -984,7 +996,7 @@
 
     try {
       const storedContentFilter = localStorage.getItem('raindrop_content_filter');
-      if (storedContentFilter === 'video' || storedContentFilter === 'all') {
+      if (storedContentFilter === 'video' || storedContentFilter === 'unsorted' || storedContentFilter === 'all') {
         selectedContentFilter = storedContentFilter;
       }
     } catch (error) {
@@ -1024,6 +1036,8 @@
       const normalizedMessage = typeof message === 'string' ? message.trim().toLowerCase() : '';
       if (selectedContentFilter === 'video' && normalizedMessage === 'no bookmarks available') {
         displayMessage = `${message} (video filter enabled — try switching back to \"All content\".)`;
+      } else if (selectedContentFilter === 'unsorted' && normalizedMessage === 'no bookmarks available') {
+        displayMessage = `${message} (unsorted filter enabled — try switching back to \"All content\".)`;
       }
       const retryBtn = retry ? `<button onclick="getRandom()" style="margin-top: 12px; padding: 8px 16px; background: #495057; color: white; border: none; border-radius: 6px; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">Try Again</button>` : '';
       const bookmarkEl = document.getElementById("bookmark");
@@ -1228,6 +1242,7 @@
       const thirtyDaysAgo = now - 30 * 24 * 60 * 60 * 1000;
 
       const isVideo = typeof bookmark.type === 'string' && bookmark.type.toLowerCase() === 'video';
+      const isUnsorted = Number(resolveBookmarkCollectionId(bookmark)) === -1;
       const inLast7Days = Number.isFinite(createdTimestamp) && createdTimestamp >= sevenDaysAgo;
       const inLast30Days = Number.isFinite(createdTimestamp) && createdTimestamp >= thirtyDaysAgo;
 
@@ -1248,6 +1263,7 @@
         const updatedStats = {
           totalItems: decrementCount(stats.totalItems),
           videoItems: isVideo ? decrementCount(stats.videoItems) : sanitizeCount(stats.videoItems),
+          unsortedItems: isUnsorted ? decrementCount(stats.unsortedItems) : sanitizeCount(stats.unsortedItems),
           last7Days: inLast7Days ? decrementCount(stats.last7Days) : sanitizeCount(stats.last7Days),
           last30Days: inLast30Days ? decrementCount(stats.last30Days) : sanitizeCount(stats.last30Days)
         };
@@ -1339,12 +1355,12 @@
 
         const contentSel = document.getElementById("contentFilter");
         if (contentSel) {
-          if (selectedContentFilter !== 'video') {
+          if (!['video', 'unsorted'].includes(selectedContentFilter)) {
             selectedContentFilter = 'all';
           }
           contentSel.value = selectedContentFilter;
           contentSel.addEventListener("change", e => {
-            const value = e.target.value === 'video' ? 'video' : 'all';
+            const value = ['video', 'unsorted'].includes(e.target.value) ? e.target.value : 'all';
             selectedContentFilter = value;
             try {
               localStorage.setItem('raindrop_content_filter', value);

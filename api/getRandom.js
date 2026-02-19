@@ -4,7 +4,7 @@ import fetch from "node-fetch";
  * Supported query parameters:
  *  - collectionId (required): Raindrop collection identifier ("0" for all collections)
  *  - lengthFilter (optional): "all" | "short" | "medium" | "long"
- *  - typeFilter (optional): "all" | "video"
+ *  - typeFilter (optional): "all" | "video" | "unsorted"
  *  - dateFilter (optional): "any" | "last7" | "last30" | "custom"
  *  - startDate / endDate (optional): ISO date strings used with dateFilter=custom
  *  - addedAfter / addedBefore (optional aliases for startDate/endDate)
@@ -96,7 +96,7 @@ export default async function handler(req, res) {
   const normalizedLength = lengthFilter ? lengthFilter.toLowerCase() : 'all';
 
   const normalizedType = (typeFilter || 'all').toLowerCase();
-  if (!['all', 'video'].includes(normalizedType)) {
+  if (!['all', 'video', 'unsorted'].includes(normalizedType)) {
     return res.status(400).json({ error: `Unsupported typeFilter value: ${typeFilter}` });
   }
   const isContentFilterActive = normalizedType !== 'all';
@@ -109,9 +109,16 @@ export default async function handler(req, res) {
   }
 
   if (isContentFilterActive) {
-    filteredBookmarks = filteredBookmarks.filter(bookmark =>
-      (bookmark.type || '').toLowerCase() === 'video'
-    );
+    filteredBookmarks = filteredBookmarks.filter(bookmark => {
+      if (normalizedType === 'video') {
+        return (bookmark.type || '').toLowerCase() === 'video';
+      }
+      if (normalizedType === 'unsorted') {
+        const collectionId = bookmark.collection?.$id ?? bookmark.collection?._id ?? bookmark.collectionId;
+        return Number(collectionId) === -1;
+      }
+      return true;
+    });
   }
 
   const now = new Date();
@@ -199,7 +206,13 @@ export default async function handler(req, res) {
       return res.status(200).json({ error: `No ${lengthFilter} articles found in this collection` });
     }
     if (isContentFilterActive) {
-      return res.status(200).json({ error: 'No video bookmarks available with the video filter enabled' });
+      if (normalizedType === 'video') {
+        return res.status(200).json({ error: 'No video bookmarks available with the video filter enabled' });
+      }
+      if (normalizedType === 'unsorted') {
+        return res.status(200).json({ error: 'No unsorted bookmarks available with the unsorted filter enabled' });
+      }
+      return res.status(200).json({ error: 'No bookmarks available with the selected content filter enabled' });
     }
     return res.status(200).json({ error: 'No bookmarks available' });
   }
