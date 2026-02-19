@@ -149,6 +149,48 @@
       box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
 
+    .content-filter {
+      width: 100%;
+      padding: 12px 16px;
+      border: 2px solid #ced4da;
+      border-radius: 8px;
+      background: white;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      min-height: 44px;
+    }
+
+    .content-filter.loading {
+      opacity: 0.7;
+      cursor: wait;
+    }
+
+    .content-filter-option {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin: 0;
+      font-weight: 400;
+      cursor: pointer;
+      color: #212529;
+    }
+
+    .content-filter-option input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      margin: 0;
+      accent-color: #495057;
+      cursor: pointer;
+      min-height: auto;
+      box-shadow: none;
+    }
+
+    .content-filter-option span {
+      line-height: 1.2;
+    }
+
     input[type="text"] {
       width: 100%;
       padding: 12px 16px;
@@ -180,6 +222,11 @@
       }
 
       .filters-content select {
+        padding: 10px 14px;
+        min-height: 42px;
+      }
+
+      .content-filter {
         padding: 10px 14px;
         min-height: 42px;
       }
@@ -704,12 +751,21 @@
             </div>
 
             <div class="form-group">
-              <label for="contentFilter">Content type:</label>
-              <select id="contentFilter" aria-label="Filter by content type">
-                <option value="all">All content</option>
-                <option value="video">Video only</option>
-                <option value="unsorted">Unsorted only</option>
-              </select>
+              <label>Content type:</label>
+              <div id="contentFilter" class="content-filter" role="group" aria-label="Filter by content type">
+                <label class="content-filter-option" for="contentFilterAll">
+                  <input id="contentFilterAll" type="checkbox" value="all" />
+                  <span>All content</span>
+                </label>
+                <label class="content-filter-option" for="contentFilterVideo">
+                  <input id="contentFilterVideo" type="checkbox" value="video" />
+                  <span>Video only</span>
+                </label>
+                <label class="content-filter-option" for="contentFilterUnsorted">
+                  <input id="contentFilterUnsorted" type="checkbox" value="unsorted" />
+                  <span>Unsorted only</span>
+                </label>
+              </div>
             </div>
 
             <div class="form-group">
@@ -809,14 +865,14 @@
     let current = null;
     let selectedCollection = null;
     let selectedLengthFilter = 'all';
-    let selectedContentFilter = 'all';
+    let selectedContentFilters = new Set();
     let selectedTagFilter = '';
     let collectionsCache = null;
     let selectedDateFilter = 'any';
     let customStartDate = '';
     let customEndDate = '';
     let editFormLoading = false;
-    const defaultContentFilterLabels = {};
+    const defaultContentFilterLabels = { all: "All content", video: "Video only", unsorted: "Unsorted only" };
     const defaultDateFilterLabels = {};
     const filterStatsCache = new Map();
     let lastFilterStatsRequestId = 0;
@@ -874,14 +930,6 @@
     }
 
     function captureDefaultFilterLabels() {
-      const contentSelect = document.getElementById("contentFilter");
-      if (contentSelect) {
-        Array.from(contentSelect.options).forEach(option => {
-          defaultContentFilterLabels[option.value] = option.textContent;
-          option.dataset.defaultLabel = option.textContent;
-        });
-      }
-
       const dateSelect = document.getElementById("dateFilter");
       if (dateSelect) {
         Array.from(dateSelect.options).forEach(option => {
@@ -894,60 +942,84 @@
     captureDefaultFilterLabels();
 
     function setFilterSelectLoading(isLoading) {
-      const selects = [
-        document.getElementById("contentFilter"),
-        document.getElementById("dateFilter")
-      ];
+      const dateSelect = document.getElementById("dateFilter");
+      const contentFilter = document.getElementById("contentFilter");
+      const contentCheckboxes = Array.from(document.querySelectorAll('#contentFilter input[type="checkbox"]'));
 
-      selects.forEach(select => {
-        if (!select) return;
-
+      if (dateSelect) {
         if (isLoading) {
-          if (!select.dataset.wasDisabled) {
-            select.dataset.wasDisabled = select.disabled ? 'true' : 'false';
+          if (!dateSelect.dataset.wasDisabled) {
+            dateSelect.dataset.wasDisabled = dateSelect.disabled ? 'true' : 'false';
           }
-          select.classList.add('loading');
-          select.disabled = true;
-          select.setAttribute('aria-busy', 'true');
+          dateSelect.classList.add('loading');
+          dateSelect.disabled = true;
+          dateSelect.setAttribute('aria-busy', 'true');
         } else {
-          const wasDisabled = select.dataset.wasDisabled === 'true';
+          const wasDisabled = dateSelect.dataset.wasDisabled === 'true';
           if (!wasDisabled) {
-            select.disabled = false;
+            dateSelect.disabled = false;
           }
-          select.classList.remove('loading');
-          select.removeAttribute('aria-busy');
-          delete select.dataset.wasDisabled;
+          dateSelect.classList.remove('loading');
+          dateSelect.removeAttribute('aria-busy');
+          delete dateSelect.dataset.wasDisabled;
+        }
+      }
+
+      if (contentFilter) {
+        if (isLoading) {
+          contentFilter.classList.add('loading');
+          contentFilter.setAttribute('aria-busy', 'true');
+        } else {
+          contentFilter.classList.remove('loading');
+          contentFilter.removeAttribute('aria-busy');
+        }
+      }
+
+      contentCheckboxes.forEach(checkbox => {
+        if (isLoading) {
+          if (!checkbox.dataset.wasDisabled) {
+            checkbox.dataset.wasDisabled = checkbox.disabled ? 'true' : 'false';
+          }
+          checkbox.disabled = true;
+        } else {
+          const wasDisabled = checkbox.dataset.wasDisabled === 'true';
+          if (!wasDisabled) {
+            checkbox.disabled = false;
+          }
+          delete checkbox.dataset.wasDisabled;
         }
       });
     }
 
     function applyFilterCounts(stats) {
-      const contentSelect = document.getElementById("contentFilter");
+      const contentCheckboxes = Array.from(document.querySelectorAll('#contentFilter input[type="checkbox"]'));
       const dateSelect = document.getElementById("dateFilter");
       const hasStats = stats && typeof stats === 'object';
 
-      if (contentSelect) {
+      if (contentCheckboxes.length > 0) {
         const totalItems = hasStats ? formatCount(stats.totalItems) : null;
         const videoItems = hasStats ? formatCount(stats.videoItems) : null;
         const unsortedItems = hasStats ? formatCount(stats.unsortedItems) : null;
 
-        Array.from(contentSelect.options).forEach(option => {
-          const defaultLabel = option.dataset.defaultLabel || defaultContentFilterLabels[option.value];
-          if (!defaultLabel) return;
+        contentCheckboxes.forEach(checkbox => {
+          const value = checkbox.value;
+          const defaultLabel = defaultContentFilterLabels[value];
+          const labelSpan = checkbox.closest('label')?.querySelector('span');
+          if (!defaultLabel || !labelSpan) return;
 
           if (!hasStats) {
-            option.textContent = defaultLabel;
+            labelSpan.textContent = defaultLabel;
             return;
           }
 
-          if (option.value === 'all') {
-            option.textContent = `${defaultLabel} (${totalItems})`;
-          } else if (option.value === 'video') {
-            option.textContent = `${defaultLabel} (${videoItems})`;
-          } else if (option.value === 'unsorted') {
-            option.textContent = `${defaultLabel} (${unsortedItems})`;
+          if (value === 'all') {
+            labelSpan.textContent = `${defaultLabel} (${totalItems})`;
+          } else if (value === 'video') {
+            labelSpan.textContent = `${defaultLabel} (${videoItems})`;
+          } else if (value === 'unsorted') {
+            labelSpan.textContent = `${defaultLabel} (${unsortedItems})`;
           } else {
-            option.textContent = defaultLabel;
+            labelSpan.textContent = defaultLabel;
           }
         });
       }
@@ -1018,8 +1090,19 @@
 
     try {
       const storedContentFilter = localStorage.getItem('raindrop_content_filter');
-      if (storedContentFilter === 'video' || storedContentFilter === 'unsorted' || storedContentFilter === 'all') {
-        selectedContentFilter = storedContentFilter;
+      if (storedContentFilter) {
+        if (storedContentFilter.startsWith('[')) {
+          const parsed = JSON.parse(storedContentFilter);
+          if (Array.isArray(parsed)) {
+            parsed.forEach(value => {
+              if (value === 'video' || value === 'unsorted') {
+                selectedContentFilters.add(value);
+              }
+            });
+          }
+        } else if (storedContentFilter === 'video' || storedContentFilter === 'unsorted') {
+          selectedContentFilters.add(storedContentFilter);
+        }
       }
     } catch (error) {
       console.warn('Failed to read saved content filter preference:', error);
@@ -1056,10 +1139,14 @@
     function showError(message, retry = false) {
       let displayMessage = message;
       const normalizedMessage = typeof message === 'string' ? message.trim().toLowerCase() : '';
-      if (selectedContentFilter === 'video' && normalizedMessage === 'no bookmarks available') {
-        displayMessage = `${message} (video filter enabled — try switching back to \"All content\".)`;
-      } else if (selectedContentFilter === 'unsorted' && normalizedMessage === 'no bookmarks available') {
-        displayMessage = `${message} (unsorted filter enabled — try switching back to \"All content\".)`;
+      const hasVideoFilter = selectedContentFilters.has('video');
+      const hasUnsortedFilter = selectedContentFilters.has('unsorted');
+      if (hasVideoFilter && hasUnsortedFilter && normalizedMessage === 'no bookmarks available') {
+        displayMessage = `${message} (video + unsorted filters enabled — try disabling one or both.)`;
+      } else if (hasVideoFilter && normalizedMessage === 'no bookmarks available') {
+        displayMessage = `${message} (video filter enabled — try switching back to "All content".)`;
+      } else if (hasUnsortedFilter && normalizedMessage === 'no bookmarks available') {
+        displayMessage = `${message} (unsorted filter enabled — try switching back to "All content".)`;
       }
       const retryBtn = retry ? `<button onclick="getRandom()" style="margin-top: 12px; padding: 8px 16px; background: #495057; color: white; border: none; border-radius: 6px; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">Try Again</button>` : '';
       const bookmarkEl = document.getElementById("bookmark");
@@ -1398,20 +1485,42 @@
         selectedLengthFilter = lengthSel.value || "all";
         lengthSel.addEventListener("change", e => selectedLengthFilter = e.target.value);
 
-        const contentSel = document.getElementById("contentFilter");
-        if (contentSel) {
-          if (!['video', 'unsorted'].includes(selectedContentFilter)) {
-            selectedContentFilter = 'all';
-          }
-          contentSel.value = selectedContentFilter;
-          contentSel.addEventListener("change", e => {
-            const value = ['video', 'unsorted'].includes(e.target.value) ? e.target.value : 'all';
-            selectedContentFilter = value;
-            try {
-              localStorage.setItem('raindrop_content_filter', value);
-            } catch (error) {
-              console.warn('Failed to store content filter preference:', error);
+        const contentCheckboxes = Array.from(document.querySelectorAll('#contentFilter input[type="checkbox"]'));
+        if (contentCheckboxes.length > 0) {
+          const allCheckbox = document.getElementById('contentFilterAll');
+
+          const syncContentFilterUI = () => {
+            const hasSpecificFilter = selectedContentFilters.size > 0;
+            if (allCheckbox) {
+              allCheckbox.checked = !hasSpecificFilter;
             }
+            contentCheckboxes.forEach(checkbox => {
+              if (checkbox.value === 'all') return;
+              checkbox.checked = selectedContentFilters.has(checkbox.value);
+            });
+          };
+
+          syncContentFilterUI();
+
+          contentCheckboxes.forEach(checkbox => {
+            checkbox.addEventListener('change', () => {
+              if (checkbox.value === 'all') {
+                if (checkbox.checked) {
+                  selectedContentFilters.clear();
+                }
+              } else if (checkbox.checked) {
+                selectedContentFilters.add(checkbox.value);
+              } else {
+                selectedContentFilters.delete(checkbox.value);
+              }
+
+              syncContentFilterUI();
+              try {
+                localStorage.setItem('raindrop_content_filter', JSON.stringify(Array.from(selectedContentFilters)));
+              } catch (error) {
+                console.warn('Failed to store content filter preference:', error);
+              }
+            });
           });
         }
 
@@ -1515,8 +1624,8 @@
             lengthFilter: selectedLengthFilter
           });
 
-          if (selectedContentFilter && selectedContentFilter !== 'all') {
-            params.set('typeFilter', selectedContentFilter);
+          if (selectedContentFilters.size > 0) {
+            params.set('typeFilter', Array.from(selectedContentFilters).join(','));
           }
 
           const normalizedTagFilter = (selectedTagFilter || '').trim();
