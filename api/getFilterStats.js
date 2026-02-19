@@ -61,6 +61,11 @@ export default async function handler(req, res) {
         acc.videoItems += 1;
       }
 
+      const collectionId = item.collection?.$id ?? item.collection?._id ?? item.collectionId;
+      if (Number(collectionId) === -1) {
+        acc.unsortedItems += 1;
+      }
+
       const created = new Date(item.created);
       if (!Number.isNaN(created.getTime())) {
         const timestamp = created.getTime();
@@ -76,6 +81,7 @@ export default async function handler(req, res) {
     }, {
       totalItems: 0,
       videoItems: 0,
+      unsortedItems: 0,
       last7Days: 0,
       last30Days: 0
     });
@@ -83,6 +89,7 @@ export default async function handler(req, res) {
     return res.status(200).json({
       totalItems: totals.totalItems,
       videoItems: totals.videoItems,
+      unsortedItems: totals.unsortedItems,
       last7Days: totals.last7Days,
       last30Days: totals.last30Days
     });
