@@ -1057,12 +1057,53 @@
       }
     }
 
-    async function updateFilterCounts(collectionId) {
+    function buildFilterStatsRequest(collectionId) {
       const normalizedId = collectionId != null ? String(collectionId) : '0';
+      const normalizedLengthFilter = (selectedLengthFilter || 'all').toLowerCase();
+      const normalizedTagFilter = (selectedTagFilter || '').trim();
+      const normalizedDateFilter = (selectedDateFilter || 'any').toLowerCase();
+      const normalizedStartDate = (customStartDate || '').trim();
+      const normalizedEndDate = (customEndDate || '').trim();
+      const normalizedTypeFilterValues = selectedContentFilters.size > 0
+        ? Array.from(selectedContentFilters).sort()
+        : ['all'];
+      const normalizedTypeFilter = normalizedTypeFilterValues.join(',');
 
-      if (filterStatsCache.has(normalizedId)) {
+      const requestParams = {
+        collectionId: normalizedId,
+        lengthFilter: normalizedLengthFilter,
+        typeFilter: normalizedTypeFilter,
+        tagFilter: normalizedTagFilter,
+        dateFilter: normalizedDateFilter,
+        startDate: normalizedStartDate,
+        endDate: normalizedEndDate
+      };
+
+      const cacheKey = JSON.stringify(requestParams);
+      const params = new URLSearchParams();
+      params.set('collectionId', requestParams.collectionId);
+      params.set('lengthFilter', requestParams.lengthFilter);
+      params.set('typeFilter', requestParams.typeFilter);
+      if (requestParams.tagFilter) {
+        params.set('tagFilter', requestParams.tagFilter);
+      }
+      params.set('dateFilter', requestParams.dateFilter);
+      if (requestParams.startDate) {
+        params.set('startDate', requestParams.startDate);
+      }
+      if (requestParams.endDate) {
+        params.set('endDate', requestParams.endDate);
+      }
+
+      return { cacheKey, queryString: params.toString() };
+    }
+
+    async function updateFilterCounts(collectionId) {
+      const { cacheKey, queryString } = buildFilterStatsRequest(collectionId);
+
+      if (filterStatsCache.has(cacheKey)) {
         lastFilterStatsRequestId += 1;
-        const cached = filterStatsCache.get(normalizedId);
+        const cached = filterStatsCache.get(cacheKey);
         applyFilterCounts(cached);
         setFilterSelectLoading(false);
         return cached;
@@ -1071,12 +1112,12 @@
       const requestId = ++lastFilterStatsRequestId;
       setFilterSelectLoading(true);
       try {
-        const response = await fetch(`/api/getFilterStats?collectionId=${encodeURIComponent(normalizedId)}`);
+        const response = await fetch(`/api/getFilterStats?${queryString}`);
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
         const payload = await response.json();
-        filterStatsCache.set(normalizedId, payload);
+        filterStatsCache.set(cacheKey, payload);
         if (requestId === lastFilterStatsRequestId) {
           applyFilterCounts(payload);
         }
@@ -1323,15 +1364,6 @@
       target.count = Math.max(0, currentCount - 1);
     }
 
-    function sanitizeCount(value) {
-      const numeric = Number(value);
-      return Number.isFinite(numeric) ? numeric : 0;
-    }
-
-    function decrementCount(value) {
-      return Math.max(0, sanitizeCount(value) - 1);
-    }
-
     function resolveBookmarkCollectionId(bookmark) {
       if (!bookmark) {
         return null;
@@ -1370,48 +1402,9 @@
         return;
       }
 
-      const normalizedCollectionId = resolveBookmarkCollectionId(bookmark);
-      const now = Date.now();
-      const createdDate = bookmark.created ? new Date(bookmark.created) : null;
-      const createdTimestamp = createdDate && !Number.isNaN(createdDate.getTime())
-        ? createdDate.getTime()
-        : NaN;
-      const sevenDaysAgo = now - 7 * 24 * 60 * 60 * 1000;
-      const thirtyDaysAgo = now - 30 * 24 * 60 * 60 * 1000;
-
-      const isVideo = typeof bookmark.type === 'string' && bookmark.type.toLowerCase() === 'video';
-      const isUnsorted = Number(resolveBookmarkCollectionId(bookmark)) === -1;
-      const inLast7Days = Number.isFinite(createdTimestamp) && createdTimestamp >= sevenDaysAgo;
-      const inLast30Days = Number.isFinite(createdTimestamp) && createdTimestamp >= thirtyDaysAgo;
-
-      const keysToUpdate = [];
-      if (filterStatsCache.has('0')) {
-        keysToUpdate.push('0');
-      }
-      if (normalizedCollectionId && filterStatsCache.has(normalizedCollectionId)) {
-        keysToUpdate.push(normalizedCollectionId);
-      }
-
-      keysToUpdate.forEach(key => {
-        const stats = filterStatsCache.get(key);
-        if (!stats) {
-          return;
-        }
-
-        const updatedStats = {
-          totalItems: decrementCount(stats.totalItems),
-          videoItems: isVideo ? decrementCount(stats.videoItems) : sanitizeCount(stats.videoItems),
-          unsortedItems: isUnsorted ? decrementCount(stats.unsortedItems) : sanitizeCount(stats.unsortedItems),
-          last7Days: inLast7Days ? decrementCount(stats.last7Days) : sanitizeCount(stats.last7Days),
-          last30Days: inLast30Days ? decrementCount(stats.last30Days) : sanitizeCount(stats.last30Days)
-        };
-
-        filterStatsCache.set(key, updatedStats);
-
-        if (String(selectedCollection ?? '0') === key) {
-          applyFilterCounts(updatedStats);
-        }
-      });
+      // Filter stats are now cached per full filter context, so incremental updates
+      // are error-prone. Invalidate cache and let updateFilterCounts fetch fresh stats.
+      filterStatsCache.clear();
     }
 
     function getCollectionsCache() {
@@ -1489,7 +1482,10 @@
         // Set up length filter listener
         const lengthSel = document.getElementById("lengthFilter");
         selectedLengthFilter = lengthSel.value || "all";
-        lengthSel.addEventListener("change", e => selectedLengthFilter = e.target.value);
+        lengthSel.addEventListener("change", e => {
+          selectedLengthFilter = e.target.value;
+          updateFilterCounts(selectedCollection);
+        });
 
         const contentCheckboxes = Array.from(document.querySelectorAll('#contentFilter input[type="checkbox"]'));
         if (contentCheckboxes.length > 0) {
@@ -1526,6 +1522,8 @@
               } catch (error) {
                 console.warn('Failed to store content filter preference:', error);
               }
+
+              updateFilterCounts(selectedCollection);
             });
           });
         }
@@ -1535,6 +1533,7 @@
           selectedTagFilter = tagFilterInput.value || '';
           tagFilterInput.addEventListener("input", e => {
             selectedTagFilter = e.target.value || '';
+            updateFilterCounts(selectedCollection);
           });
         }
 
@@ -1557,6 +1556,7 @@
           dateSel.addEventListener("change", e => {
             selectedDateFilter = e.target.value;
             updateCustomDateVisibility();
+            updateFilterCounts(selectedCollection);
           });
         }
 
@@ -1564,6 +1564,7 @@
           customStartDate = customStartInput.value;
           customStartInput.addEventListener("change", e => {
             customStartDate = e.target.value;
+            updateFilterCounts(selectedCollection);
           });
         }
 
@@ -1571,6 +1572,7 @@
           customEndDate = customEndInput.value;
           customEndInput.addEventListener("change", e => {
             customEndDate = e.target.value;
+            updateFilterCounts(selectedCollection);
           });
         }
       }

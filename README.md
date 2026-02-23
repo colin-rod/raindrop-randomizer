@@ -51,7 +51,7 @@ All API routes live inside the [`api/`](api) directory and forward requests to t
 | --- | --- | --- |
 | `/api/getCollections` | `GET` | Lists all Raindrop collections with their item counts. |
 | `/api/getRandom` | `GET` | Returns a random bookmark from the specified collection. Supports optional filters such as `lengthFilter`, `typeFilter`, `tagFilter`, `dateFilter`, and custom `startDate`/`endDate`. |
-| `/api/getFilterStats` | `GET` | Computes helper statistics (total items, videos, last 7/30 days) for the selected collection. |
+| `/api/getFilterStats` | `GET` | Computes helper statistics (total items, videos, unsorted, last 7/30 days) for the selected collection and current active filters (`lengthFilter`, `typeFilter`, `tagFilter`, `dateFilter`, `startDate`, `endDate`). |
 | `/api/update` | `POST` | Updates bookmark metadata (title, tags, target collection). Expect a JSON body containing at least `id` and `title`. |
 | `/api/delete` | `DELETE` | Deletes a bookmark by `id`. |
 
