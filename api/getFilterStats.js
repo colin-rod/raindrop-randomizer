@@ -1,12 +1,4 @@
-import fetch from "node-fetch";
-
-function buildEndpoint(collectionId, page, perpage) {
-  const base = "https://api.raindrop.io/rest/v1/raindrops";
-  if (collectionId === "0") {
-    return `${base}/0?perpage=${perpage}&page=${page}`;
-  }
-  return `${base}/${collectionId}?perpage=${perpage}&page=${page}`;
-}
+import fetchAllRaindrops from "./_lib/fetchAllRaindrops.js";
 
 export default async function handler(req, res) {
   const token = process.env.RAINDROP_TOKEN;
@@ -23,32 +15,11 @@ export default async function handler(req, res) {
   const normalizedCollectionId = String(collectionId);
 
   try {
-    const perpage = 100;
-    let page = 0;
-    let items = [];
-
-    while (true) {
-      const endpoint = buildEndpoint(normalizedCollectionId, page, perpage);
-      const resp = await fetch(endpoint, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-
-      if (!resp.ok) {
-        return res.status(500).json({ error: "Failed to fetch bookmarks from collection" });
-      }
-
-      const data = await resp.json();
-      if (!Array.isArray(data.items) || data.items.length === 0) {
-        break;
-      }
-
-      items = items.concat(data.items);
-      page += 1;
-
-      if (page > 10) {
-        break;
-      }
-    }
+    const items = await fetchAllRaindrops({
+      token,
+      collectionId: normalizedCollectionId,
+      perpage: 100
+    });
 
     const now = Date.now();
     const sevenDaysAgo = now - 7 * 24 * 60 * 60 * 1000;
