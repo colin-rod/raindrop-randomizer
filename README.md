@@ -36,7 +36,7 @@ When deploying to Vercel, add the same variables in the project settings under *
 
 ### Classifier status panel
 
-The **Classifier** panel in the sidebar reads the GitHub Actions history of the
+The **Classifier** control in the title bar reads the GitHub Actions history of the
 [raindrop_classifier](https://github.com/colin-rod/raindrop_classifier) repo, which sorts and re-tags
 unsorted bookmarks every Sunday. Run metadata (status, timing, next scheduled run) works without any
 extra configuration. The classifier commits no run output, so the per-run summary is parsed out of the
@@ -81,7 +81,7 @@ All API routes live inside the [`api/`](api) directory and forward requests to t
 
 ## Frontend
 
-The static UI lives in [`public/index.html`](public/index.html). It provides a single-page interface for picking collections, applying filters, and displaying the random bookmark returned from `/api/getRandom`. The sidebar also carries the collapsible **Classifier** panel fed by `/api/classifierStatus`.
+The static UI lives in [`public/index.html`](public/index.html). It provides a single-page interface for picking collections, applying filters, and displaying the random bookmark returned from `/api/getRandom`. The title bar carries a **Classifier** status button fed by `/api/classifierStatus`; clicking it opens a popover that overlays the page rather than reflowing it.
 
 ## Deployment
 
