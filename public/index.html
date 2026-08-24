@@ -626,6 +626,235 @@
       box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);
     }
     
+    .classifier-panel {
+      margin: 0 12px 12px;
+      background: white;
+      border: 1px solid #dee2e6;
+      border-radius: 10px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+
+    .classifier-summary {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      list-style: none;
+      cursor: pointer;
+      padding: 10px 12px;
+    }
+
+    .classifier-summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .classifier-summary:focus-visible {
+      outline: 2px solid #0d6efd;
+      outline-offset: 2px;
+      border-radius: 10px;
+    }
+
+    .classifier-heading {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      min-width: 0;
+    }
+
+    .classifier-heading__title {
+      font-weight: 600;
+      font-size: 14px;
+      color: #374151;
+    }
+
+    .classifier-heading__hint {
+      font-size: 12px;
+      color: #6c757d;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .classifier-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      flex: none;
+      font-size: 12px;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: #e9ecef;
+      color: #495057;
+    }
+
+    .classifier-badge--success { background: #d1e7dd; color: #0f5132; }
+    .classifier-badge--failure { background: #f8d7da; color: #842029; }
+    .classifier-badge--running { background: #cff4fc; color: #055160; }
+
+    .classifier-body {
+      padding: 0 12px 12px;
+      font-size: 13px;
+      color: #495057;
+    }
+
+    .classifier-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 2px 10px;
+      font-size: 12px;
+      color: #6c757d;
+      margin-bottom: 10px;
+    }
+
+    .classifier-stats {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+      margin: 0 0 10px;
+    }
+
+    .classifier-stat {
+      background: #f8f9fa;
+      border-radius: 8px;
+      padding: 8px 10px;
+      box-shadow: inset 0 2px 4px rgba(0,0,0,0.04);
+    }
+
+    .classifier-stat dt {
+      margin: 0 0 2px;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: #6c757d;
+    }
+
+    .classifier-stat dd {
+      margin: 0;
+      font-size: 18px;
+      font-weight: 700;
+      color: #212529;
+    }
+
+    .classifier-section-title {
+      margin: 12px 0 6px;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: #6c757d;
+    }
+
+    .classifier-list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .classifier-list li {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 3px 8px;
+      align-items: center;
+      line-height: 1.3;
+    }
+
+    .classifier-list__value {
+      font-variant-numeric: tabular-nums;
+      font-weight: 600;
+      color: #212529;
+    }
+
+    .classifier-bar {
+      grid-column: 1 / -1;
+      height: 4px;
+      border-radius: 999px;
+      background: #e9ecef;
+      overflow: hidden;
+    }
+
+    .classifier-bar span {
+      display: block;
+      height: 100%;
+      border-radius: 999px;
+      background: #495057;
+    }
+
+    .classifier-runs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+    }
+
+    .classifier-run {
+      width: 16px;
+      height: 16px;
+      border-radius: 4px;
+      background: #ced4da;
+      text-decoration: none;
+    }
+
+    .classifier-run--success { background: #4caf7d; }
+    .classifier-run--failure { background: #e35d6a; }
+    .classifier-run--running { background: #6ea8fe; }
+
+    .classifier-note {
+      background: #f8f9fa;
+      border-radius: 8px;
+      padding: 8px 10px;
+      font-size: 12px;
+      color: #6c757d;
+      box-shadow: inset 0 2px 4px rgba(0,0,0,0.04);
+    }
+
+    .classifier-note--error {
+      background: #f8d7da;
+      color: #842029;
+      box-shadow: none;
+    }
+
+    .classifier-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .classifier-link {
+      font-size: 12px;
+      font-weight: 600;
+      color: #0d6efd;
+      text-decoration: none;
+    }
+
+    .classifier-link:hover {
+      text-decoration: underline;
+    }
+
+    .classifier-refresh {
+      border: 1px solid #ced4da;
+      background: white;
+      border-radius: 8px;
+      padding: 4px 10px;
+      font-size: 12px;
+      font-weight: 600;
+      color: #495057;
+      cursor: pointer;
+    }
+
+    .classifier-refresh:hover:not(:disabled) {
+      background: #f1f3f5;
+    }
+
+    .classifier-refresh:disabled {
+      opacity: 0.6;
+      cursor: default;
+    }
+
     /* Mobile Optimizations */
     @media (max-width: 768px) {
       body {
@@ -808,6 +1037,19 @@
             <span class="btn-text">Delete</span>
           </button>
         </div>
+
+        <details id="classifierPanel" class="classifier-panel">
+          <summary class="classifier-summary">
+            <span class="classifier-heading">
+              <span class="classifier-heading__title">Classifier</span>
+              <span id="classifierHint" class="classifier-heading__hint">Loading weekly run&hellip;</span>
+            </span>
+            <span id="classifierBadge" class="classifier-badge">&hellip;</span>
+          </summary>
+          <div id="classifierBody" class="classifier-body" aria-live="polite">
+            <div class="classifier-note">Loading the latest classifier run&hellip;</div>
+          </div>
+        </details>
       </div>
       <main id="bookmark" role="region" aria-live="polite" aria-busy="false">
         <div class="bookmark-placeholder">
@@ -923,6 +1165,303 @@
       const numeric = Number(value);
       const safeValue = Number.isFinite(numeric) ? numeric : 0;
       return numberFormatter ? numberFormatter.format(safeValue) : String(safeValue);
+    }
+
+    // --- Raindrop Classifier status ---------------------------------------
+    // Reads /api/classifierStatus, which summarises the weekly GitHub Actions run
+    // of the colin-rod/raindrop_classifier repo.
+    let classifierLoading = false;
+
+    function escapeHtml(value) {
+      return String(value ?? "").replace(/[&<>"']/g, (char) => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;"
+      })[char]);
+    }
+
+    function formatRelativeTime(iso) {
+      if (!iso) return null;
+      const timestamp = new Date(iso).getTime();
+      if (Number.isNaN(timestamp)) return null;
+
+      const diffSeconds = Math.round((timestamp - Date.now()) / 1000);
+      const absSeconds = Math.abs(diffSeconds);
+      const units = [
+        ["minute", 60],
+        ["hour", 3600],
+        ["day", 86400],
+        ["week", 604800],
+        ["month", 2629800],
+        ["year", 31557600]
+      ];
+
+      if (absSeconds < 60) return diffSeconds >= 0 ? "in a moment" : "just now";
+
+      let unit = "minute";
+      let seconds = 60;
+      for (const [candidateUnit, candidateSeconds] of units) {
+        if (absSeconds >= candidateSeconds) {
+          unit = candidateUnit;
+          seconds = candidateSeconds;
+        }
+      }
+      const value = Math.round(diffSeconds / seconds);
+
+      if (typeof Intl !== "undefined" && typeof Intl.RelativeTimeFormat === "function") {
+        return new Intl.RelativeTimeFormat(undefined, { numeric: "auto" }).format(value, unit);
+      }
+      const plural = Math.abs(value) === 1 ? unit : `${unit}s`;
+      return value < 0 ? `${Math.abs(value)} ${plural} ago` : `in ${Math.abs(value)} ${plural}`;
+    }
+
+    function formatAbsoluteTime(iso) {
+      if (!iso) return "";
+      const date = new Date(iso);
+      if (Number.isNaN(date.getTime())) return "";
+      return date.toLocaleString(undefined, {
+        dateStyle: "medium",
+        timeStyle: "short"
+      });
+    }
+
+    function formatDuration(seconds) {
+      if (!Number.isFinite(seconds) || seconds < 0) return null;
+      if (seconds < 60) return `${seconds}s`;
+      const minutes = Math.floor(seconds / 60);
+      const remainder = seconds % 60;
+      if (minutes < 60) return remainder ? `${minutes}m ${remainder}s` : `${minutes}m`;
+      const hours = Math.floor(minutes / 60);
+      return `${hours}h ${minutes % 60}m`;
+    }
+
+    function formatPercent(ratio, digits = 0) {
+      if (!Number.isFinite(ratio)) return null;
+      return `${(ratio * 100).toFixed(digits)}%`;
+    }
+
+    function classifierRunState(run) {
+      if (!run) return "unknown";
+      if (run.status !== "completed") return "running";
+      if (run.conclusion === "success") return "success";
+      if (run.conclusion === "cancelled" || run.conclusion === "skipped") return "unknown";
+      return "failure";
+    }
+
+    const classifierStateLabels = {
+      success: "Success",
+      failure: "Failed",
+      running: "Running",
+      unknown: "Unknown"
+    };
+
+    function renderClassifierStat(label, value) {
+      return `
+        <div class="classifier-stat">
+          <dt>${escapeHtml(label)}</dt>
+          <dd>${escapeHtml(value)}</dd>
+        </div>
+      `;
+    }
+
+    function renderClassifierCategories(categories) {
+      if (!Array.isArray(categories) || categories.length === 0) return "";
+      const top = categories.slice(0, 6);
+      const max = Math.max(...top.map((category) => category.count), 1);
+      const items = top
+        .map(
+          (category) => `
+          <li>
+            <span>${escapeHtml(category.name)}</span>
+            <span class="classifier-list__value">${formatCount(category.count)}</span>
+            <span class="classifier-bar"><span style="width: ${Math.round((category.count / max) * 100)}%"></span></span>
+          </li>
+        `
+        )
+        .join("");
+      const more = categories.length > top.length
+        ? `<div class="classifier-meta" style="margin-top:6px;">+${categories.length - top.length} more categories</div>`
+        : "";
+      return `
+        <div class="classifier-section-title">Sorted into</div>
+        <ul class="classifier-list">${items}</ul>
+        ${more}
+      `;
+    }
+
+    function renderClassifierTagHealth(cleanup) {
+      if (!cleanup) return "";
+      const rows = [
+        ["Unique tags", Number.isFinite(cleanup.currentUniqueTags) ? formatCount(cleanup.currentUniqueTags) : null],
+        ["Tag growth", formatPercent(cleanup.growthRate, 1)],
+        ["Single-use tags", formatPercent(cleanup.singleUseRatio, 1)],
+        ["Entropy", Number.isFinite(cleanup.entropy) ? cleanup.entropy.toFixed(2) : null]
+      ].filter(([, value]) => value !== null && value !== undefined);
+
+      if (rows.length === 0) return "";
+      const items = rows
+        .map(
+          ([label, value]) =>
+            `<li><span>${escapeHtml(label)}</span><span class="classifier-list__value">${escapeHtml(value)}</span></li>`
+        )
+        .join("");
+      return `
+        <div class="classifier-section-title">Tag health</div>
+        <ul class="classifier-list">${items}</ul>
+      `;
+    }
+
+    function renderClassifierHistory(history) {
+      if (!Array.isArray(history) || history.length === 0) return "";
+      const dots = history
+        .slice()
+        .reverse()
+        .map((run) => {
+          const state = classifierRunState(run);
+          const when = formatAbsoluteTime(run.startedAt) || "unknown time";
+          const title = `Run #${run.runNumber} - ${classifierStateLabels[state]} - ${when}`;
+          return `<a class="classifier-run classifier-run--${state}" href="${escapeHtml(run.url)}" target="_blank" rel="noopener noreferrer" title="${escapeHtml(title)}" aria-label="${escapeHtml(title)}"></a>`;
+        })
+        .join("");
+      return `
+        <div class="classifier-section-title">Recent runs</div>
+        <div class="classifier-runs">${dots}</div>
+      `;
+    }
+
+    function renderClassifierStatus(data) {
+      const badgeEl = document.getElementById("classifierBadge");
+      const hintEl = document.getElementById("classifierHint");
+      const bodyEl = document.getElementById("classifierBody");
+      if (!badgeEl || !hintEl || !bodyEl) return;
+
+      const activeRun = data.inProgressRun || data.latestRun;
+      const state = classifierRunState(activeRun);
+      badgeEl.className = `classifier-badge classifier-badge--${state}`;
+      badgeEl.textContent = classifierStateLabels[state];
+
+      const lastRunRelative = formatRelativeTime(data.latestRun?.startedAt);
+      hintEl.textContent = data.inProgressRun
+        ? "Run in progress"
+        : lastRunRelative
+          ? `Last run ${lastRunRelative}`
+          : "No runs yet";
+
+      const metaParts = [];
+      if (data.latestRun) {
+        const absolute = formatAbsoluteTime(data.latestRun.startedAt);
+        if (absolute) metaParts.push(`Ran ${absolute}`);
+        const duration = formatDuration(data.latestRun.durationSeconds);
+        if (duration) metaParts.push(`Took ${duration}`);
+        if (data.latestRun.event) metaParts.push(`Trigger: ${data.latestRun.event}`);
+      }
+      const nextRelative = formatRelativeTime(data.nextRunAt);
+      if (nextRelative) metaParts.push(`Next run ${nextRelative}`);
+      if (Number.isFinite(data.successRate)) {
+        metaParts.push(`${formatPercent(data.successRate)} success over last ${data.history.length}`);
+      }
+
+      const meta = metaParts.length
+        ? `<div class="classifier-meta">${metaParts.map((part) => `<span>${escapeHtml(part)}</span>`).join("")}</div>`
+        : "";
+
+      let summaryHtml = "";
+      const summary = data.summary || {};
+      if (summary.available) {
+        const classification = summary.classification || {};
+        const cleanup = summary.cleanup || {};
+        const stats = [];
+        if (Number.isFinite(classification.unsortedFound)) {
+          stats.push(renderClassifierStat("Unsorted found", formatCount(classification.unsortedFound)));
+        }
+        stats.push(renderClassifierStat("Classified", formatCount(classification.classified)));
+        if (Number.isFinite(cleanup.bookmarksUpdated)) {
+          stats.push(renderClassifierStat("Tags cleaned", formatCount(cleanup.bookmarksUpdated)));
+        }
+        if (Number.isFinite(cleanup.tagsConsolidated)) {
+          stats.push(renderClassifierStat("Tags merged", formatCount(cleanup.tagsConsolidated)));
+        } else if (Number.isFinite(classification.totalTags)) {
+          stats.push(renderClassifierStat("Total tags", formatCount(classification.totalTags)));
+        }
+
+        const skipped = cleanup.skipped
+          ? '<div class="classifier-note" style="margin-top:10px;">Tag cleanup was skipped this week - the tag metrics stayed inside their thresholds.</div>'
+          : "";
+        const errors = Array.isArray(summary.errors) && summary.errors.length
+          ? `<div class="classifier-note classifier-note--error" style="margin-top:10px;">${summary.errors.length} error${summary.errors.length === 1 ? "" : "s"} during the run: ${escapeHtml(summary.errors[0])}</div>`
+          : "";
+
+        summaryHtml = `
+          <dl class="classifier-stats">${stats.join("")}</dl>
+          ${renderClassifierCategories(summary.categories)}
+          ${renderClassifierTagHealth(cleanup)}
+          ${skipped}
+          ${errors}
+        `;
+      } else if (summary.reason) {
+        summaryHtml = `<div class="classifier-note">${escapeHtml(summary.reason)}</div>`;
+      }
+
+      const runLink = data.latestRun?.url || data.workflow?.url || data.repoUrl;
+      bodyEl.innerHTML = `
+        ${meta}
+        ${summaryHtml}
+        ${renderClassifierHistory(data.history)}
+        <div class="classifier-footer">
+          <a class="classifier-link" href="${escapeHtml(runLink)}" target="_blank" rel="noopener noreferrer">View on GitHub</a>
+          <button type="button" id="classifierRefresh" class="classifier-refresh">Refresh</button>
+        </div>
+      `;
+      wireClassifierRefresh();
+    }
+
+    function renderClassifierError(message) {
+      const badgeEl = document.getElementById("classifierBadge");
+      const hintEl = document.getElementById("classifierHint");
+      const bodyEl = document.getElementById("classifierBody");
+      if (!badgeEl || !hintEl || !bodyEl) return;
+
+      badgeEl.className = "classifier-badge";
+      badgeEl.textContent = "Unavailable";
+      hintEl.textContent = "Could not load run status";
+      bodyEl.innerHTML = `
+        <div class="classifier-note classifier-note--error">${escapeHtml(message)}</div>
+        <div class="classifier-footer">
+          <a class="classifier-link" href="https://github.com/colin-rod/raindrop_classifier/actions" target="_blank" rel="noopener noreferrer">View on GitHub</a>
+          <button type="button" id="classifierRefresh" class="classifier-refresh">Retry</button>
+        </div>
+      `;
+      wireClassifierRefresh();
+    }
+
+    function wireClassifierRefresh() {
+      const button = document.getElementById("classifierRefresh");
+      if (!button) return;
+      button.addEventListener("click", () => {
+        button.disabled = true;
+        button.textContent = "Refreshing...";
+        loadClassifierStatus({ refresh: true });
+      });
+    }
+
+    async function loadClassifierStatus({ refresh = false } = {}) {
+      if (classifierLoading) return;
+      classifierLoading = true;
+      try {
+        const resp = await fetch(`/api/classifierStatus${refresh ? "?refresh=1" : ""}`);
+        const data = await resp.json().catch(() => null);
+        if (!resp.ok || !data) {
+          throw new Error(data?.error || `Request failed with status ${resp.status}`);
+        }
+        renderClassifierStatus(data);
+      } catch (error) {
+        console.error("Failed to load classifier status", error);
+        renderClassifierError(error.message || "Failed to load classifier status.");
+      } finally {
+        classifierLoading = false;
+      }
     }
 
     function captureDefaultFilterLabels() {
@@ -2011,6 +2550,7 @@
     // Initialize app
     setupResponsiveFilters();
     loadCollections();
+    loadClassifierStatus();
   </script>
 </body>
 </html>
