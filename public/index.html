@@ -995,7 +995,8 @@
 
             <div class="form-group">
               <label for="tagFilter">Tag:</label>
-              <input id="tagFilter" type="text" placeholder="e.g. javascript" aria-label="Filter by tag" />
+              <input id="tagFilter" type="text" list="tagOptions" placeholder="e.g. javascript" aria-label="Filter by tag" autocomplete="off" />
+              <datalist id="tagOptions"></datalist>
             </div>
 
             <div class="form-group">
@@ -2060,6 +2061,25 @@
         }
 
         const tagFilterInput = document.getElementById("tagFilter");
+
+        // Offer the real vocabulary rather than making people guess exact
+        // spellings. Populated once; failure just leaves it a plain text box.
+        (async () => {
+          const list = document.getElementById("tagOptions");
+          if (!list) return;
+          try {
+            const resp = await fetch("/api/getTags?limit=500");
+            if (!resp.ok) return;
+            const { tags = [] } = await resp.json();
+            list.innerHTML = tags
+              .map(({ tag, count }) =>
+                `<option value="${String(tag).replace(/"/g, "&quot;")}">${count}</option>`)
+              .join("");
+          } catch (error) {
+            console.warn("Could not load tag suggestions", error);
+          }
+        })();
+
         if (tagFilterInput) {
           selectedTagFilter = tagFilterInput.value || '';
           tagFilterInput.addEventListener("input", e => {

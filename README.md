@@ -6,6 +6,8 @@ Raindrop Randomizer is a lightweight Vercel application that helps you discover 
 
 - Fetches your Raindrop.io collections and displays the saved item counts.
 - Returns a single random bookmark from a chosen collection with optional filters for length, media type, tag, and date range.
+- Reaches the whole library regardless of size. With no filters applied it reads the collection count and fetches one bookmark at a random offset, so every bookmark is reachable in two requests; with filters it samples random pages instead of scanning from the start.
+- Lists nested collections as well as root ones, and offers the real tag vocabulary as suggestions on the tag filter.
 - Provides quick statistics that show how many items match common filters (videos, saved in the last 7 or 30 days, etc.).
 - Shows the status and summary of the weekly [raindrop_classifier](https://github.com/colin-rod/raindrop_classifier) run, so you can see what was auto-sorted and how tag health is trending without leaving the app.
 - Allows updating bookmark metadata or deleting the bookmark directly through the API routes.
@@ -51,6 +53,10 @@ Actions job log, and reading job logs requires a token:
 
 Responses are cached for 10 minutes per serverless instance (and 5 minutes at the CDN); the panel's
 **Refresh** button bypasses both.
+
+Tag-health figures are read from `tag-metrics.json`, which the classifier commits after each run, so
+they no longer depend on scraping the Actions job log — and they show up even without `GITHUB_TOKEN`.
+Log parsing remains as a fallback for runs recorded before the classifier started committing metrics.
 
 ## Running Locally
 

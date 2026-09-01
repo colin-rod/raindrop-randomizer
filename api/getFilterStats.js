@@ -23,32 +23,46 @@ export default async function handler(req, res) {
   const normalizedCollectionId = String(collectionId);
 
   try {
-    const perpage = 100;
-    let page = 0;
-    let items = [];
+    // Raindrop documents 50 as the maximum page size.
+    const perpage = 50;
 
-    while (true) {
-      const endpoint = buildEndpoint(normalizedCollectionId, page, perpage);
-      const resp = await fetch(endpoint, {
+    // This used to stop at `page > 10`, so with more than ~1,100 bookmarks the
+    // panel silently reported a truncated total as if it were the real one.
+    // The API returns the true count on every response, so the headline figure
+    // no longer depends on how much we managed to page through.
+    const MAX_PAGES = 12;
+
+    const fetchPage = async (page) => {
+      const resp = await fetch(buildEndpoint(normalizedCollectionId, page, perpage), {
         headers: { Authorization: `Bearer ${token}` }
       });
+      if (!resp.ok) return null;
+      return resp.json();
+    };
 
-      if (!resp.ok) {
-        return res.status(500).json({ error: "Failed to fetch bookmarks from collection" });
-      }
-
-      const data = await resp.json();
-      if (!Array.isArray(data.items) || data.items.length === 0) {
-        break;
-      }
-
-      items = items.concat(data.items);
-      page += 1;
-
-      if (page > 10) {
-        break;
-      }
+    const head = await fetchPage(0);
+    if (!head) {
+      return res.status(500).json({ error: "Failed to fetch bookmarks from collection" });
     }
+
+    const reportedTotal = Number(head.count) || 0;
+    const totalPages = Math.max(1, Math.ceil(reportedTotal / perpage));
+    let items = head.items || [];
+
+    const scannedPages = Math.min(totalPages, MAX_PAGES);
+    for (let page = 1; page < scannedPages; page++) {
+      const data = await fetchPage(page);
+      if (!Array.isArray(data?.items) || data.items.length === 0) break;
+      items = items.concat(data.items);
+    }
+
+    // The breakdown counts (videos, recent, unsorted) are derived from what we
+    // actually read. When that is a sample rather than the whole collection we
+    // scale them up and say so, instead of passing a partial count off as
+    // complete.
+    const sampled = items.length;
+    const isSample = reportedTotal > sampled;
+    const scale = isSample && sampled > 0 ? reportedTotal / sampled : 1;
 
     const now = Date.now();
     const sevenDaysAgo = now - 7 * 24 * 60 * 60 * 1000;
@@ -86,12 +100,16 @@ export default async function handler(req, res) {
       last30Days: 0
     });
 
+    const scaled = value => (isSample ? Math.round(value * scale) : value);
+
     return res.status(200).json({
-      totalItems: totals.totalItems,
-      videoItems: totals.videoItems,
-      unsortedItems: totals.unsortedItems,
-      last7Days: totals.last7Days,
-      last30Days: totals.last30Days
+      totalItems: reportedTotal || totals.totalItems,
+      videoItems: scaled(totals.videoItems),
+      unsortedItems: scaled(totals.unsortedItems),
+      last7Days: scaled(totals.last7Days),
+      last30Days: scaled(totals.last30Days),
+      sampled: isSample ? sampled : undefined,
+      estimated: isSample || undefined
     });
   } catch (error) {
     console.error("Failed to compute filter stats", error);

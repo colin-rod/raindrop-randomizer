@@ -301,6 +301,58 @@ function summarizeRun(run) {
   };
 }
 
+/**
+ * Read the classifier's committed tag metrics.
+ *
+ * The panel used to reconstruct these numbers by regex-scraping ~15 lines out
+ * of the Actions job log, which meant any wording change in the classifier
+ * silently blanked this panel, and reading logs required a token with
+ * actions:read. The classifier now commits tag-metrics.json, so we read the
+ * numbers it actually recorded. Log parsing stays as a fallback for runs from
+ * before that change.
+ */
+async function fetchCommittedMetrics(repo, token) {
+  const resp = await fetch(`${GITHUB_API}/repos/${repo}/contents/tag-metrics.json`, {
+    headers: githubHeaders(token)
+  });
+  if (!resp.ok) return null;
+
+  const payload = await resp.json();
+  if (!payload?.content) return null;
+
+  const history = JSON.parse(Buffer.from(payload.content, "base64").toString("utf8"));
+  if (!Array.isArray(history) || history.length === 0) return null;
+
+  // The most recent entry that actually wrote something.
+  const latest = [...history].reverse().find(entry => !entry.dryRun) || history[history.length - 1];
+
+  const unique = Number(latest.uniqueTagCount);
+  const singleUse = Number(latest.singleUseAfter);
+
+  return {
+    ran: true,
+    skipped: false,
+    bookmarksUpdated: null,
+    tagsConsolidated: Number(latest.tagsMerged) || 0,
+    canonicalTags: Number.isFinite(unique) ? unique : null,
+    previousUniqueTags: Number.isFinite(Number(latest.previousUniqueTagCount))
+      ? Number(latest.previousUniqueTagCount)
+      : null,
+    currentUniqueTags: Number.isFinite(unique) ? unique : null,
+    totalTagUsage: null,
+    growthRate: null,
+    newTagRatio: null,
+    singleUseRatio: Number.isFinite(unique) && unique > 0 && Number.isFinite(singleUse)
+      ? singleUse / unique
+      : null,
+    entropy: null,
+    lexicalGroups: Number(latest.lexicalGroups) || 0,
+    semanticGroups: Number(latest.semanticGroups) || 0,
+    runId: latest.runId || null,
+    recordedAt: latest.timestamp || null
+  };
+}
+
 async function fetchJobLog(repo, runId, token) {
   const jobs = await githubJson(`/repos/${repo}/actions/runs/${runId}/jobs?per_page=10`, token);
   const allJobs = jobs.jobs || [];
@@ -359,15 +411,44 @@ async function buildStatus({ repo, workflow, cron, token }) {
         summary = jobLog
           ? { available: true, ...parseRunLog(jobLog.log) }
           : { available: false, reason: "The latest run has no job logs." };
+
+        // Committed metrics are authoritative where they exist: they are what
+        // the run recorded, not what we could scrape back out of its output.
+        const committed = await fetchCommittedMetrics(repo, token).catch(() => null);
+        if (committed) {
+          summary = {
+            ...summary,
+            available: true,
+            classification: summary.classification || {},
+            categories: summary.categories || [],
+            errors: summary.errors || [],
+            cleanup: { ...(summary.cleanup || {}), ...committed },
+            source: "committed-metrics"
+          };
+        }
       } catch (error) {
         console.error("Failed to read classifier run logs", error);
-        summary = {
-          available: false,
-          reason:
-            error.status === 403 || error.status === 404
-              ? "GITHUB_TOKEN cannot read Actions logs for this repository (needs actions:read)."
-              : "Could not read the run logs from GitHub."
-        };
+
+        // Tag metrics live in the repo, so the panel still has real numbers
+        // even without a token that can read Actions logs.
+        const committed = await fetchCommittedMetrics(repo, token).catch(() => null);
+        summary = committed
+          ? {
+              available: true,
+              classification: {},
+              categories: [],
+              errors: [],
+              cleanup: committed,
+              source: "committed-metrics",
+              reason: "Run logs are unavailable; showing committed tag metrics."
+            }
+          : {
+              available: false,
+              reason:
+                error.status === 403 || error.status === 404
+                  ? "GITHUB_TOKEN cannot read Actions logs for this repository (needs actions:read)."
+                  : "Could not read the run logs from GitHub."
+            };
       }
     }
   }
