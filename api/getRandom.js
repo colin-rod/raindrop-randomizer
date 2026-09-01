@@ -32,29 +32,96 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: "Missing collectionId" });
   }
 
-  // Fetch bookmarks from given collection (0 = all collections)
-  let page = 0;
-  const perpage = 100;
-  let all = [];
+  // Raindrop documents 50 as the maximum page size; asking for 100 silently
+  // gave us half the page we thought we were getting.
+  const perpage = 50;
 
-  while (true) {
-    const endpoint = collectionId === "0" 
-      ? `https://api.raindrop.io/rest/v1/raindrops/0?perpage=${perpage}&page=${page}`
-      : `https://api.raindrop.io/rest/v1/raindrops/${collectionId}?perpage=${perpage}&page=${page}`;
-      
-    const resp = await fetch(endpoint, {
+  // A hard `if (page > 10) break` used to cap this loop, so with a library
+  // larger than a few hundred bookmarks everything past the cap was unreachable
+  // by the random pick -- roughly half the library at 2,000+ bookmarks. How we
+  // avoid it depends on whether anything needs filtering client-side.
+  const anyFilterActive = Boolean(
+    (lengthFilter && lengthFilter !== 'all') ||
+    (typeFilter && !/^all$/i.test(String(typeFilter).trim())) ||
+    (tagFilter && String(tagFilter).trim()) ||
+    (dateFilter && dateFilter !== 'any') ||
+    startDate || endDate || addedAfter || addedBefore
+  );
+
+  const endpointFor = (page, size) => {
+    const base = collectionId === "0"
+      ? `https://api.raindrop.io/rest/v1/raindrops/0`
+      : `https://api.raindrop.io/rest/v1/raindrops/${collectionId}`;
+    return `${base}?perpage=${size}&page=${page}`;
+  };
+
+  const fetchPage = async (page, size = perpage) => {
+    const resp = await fetch(endpointFor(page, size), {
       headers: { Authorization: `Bearer ${token}` }
     });
-    
-    if (!resp.ok) {
+    if (!resp.ok) return null;
+    return resp.json();
+  };
+
+  let all = [];
+
+  if (!anyFilterActive) {
+    // Nothing to filter, so there is no reason to page through the collection
+    // at all: read the total, pick an index, fetch just that one bookmark.
+    // Two requests regardless of library size, and no reachability ceiling.
+    const head = await fetchPage(0, 1);
+    if (!head) {
       return res.status(500).json({ error: "Failed to fetch bookmarks from collection" });
     }
-    
-    const data = await resp.json();
-    if (!data.items.length) break;
-    all = all.concat(data.items);
-    page++;
-    if (page > 10) break; // safety cap
+
+    const total = Number(head.count) || head.items?.length || 0;
+    if (!total) {
+      return res.status(200).json({ error: "No bookmarks in this collection" });
+    }
+
+    const index = Math.floor(Math.random() * total);
+    const hit = await fetchPage(index, 1);
+    if (!hit?.items?.length) {
+      return res.status(500).json({ error: "Failed to fetch bookmarks from collection" });
+    }
+    all = hit.items;
+  } else {
+    // Filters are evaluated client-side, so we do need bookmarks in hand.
+    // Scan the whole collection when it is small enough to finish inside the
+    // function's time budget; otherwise sample random pages, which keeps every
+    // bookmark reachable however large the library grows.
+    const MAX_PAGES = 12;
+
+    const head = await fetchPage(0);
+    if (!head) {
+      return res.status(500).json({ error: "Failed to fetch bookmarks from collection" });
+    }
+
+    const total = Number(head.count) || head.items?.length || 0;
+    const totalPages = Math.max(1, Math.ceil(total / perpage));
+    all = head.items || [];
+
+    if (totalPages <= MAX_PAGES) {
+      // Small enough to be exact -- "no results" genuinely means no results.
+      for (let page = 1; page < totalPages; page++) {
+        const data = await fetchPage(page);
+        if (!data?.items?.length) break;
+        all = all.concat(data.items);
+      }
+    } else {
+      const seen = new Set([0]);
+      let attempts = 0;
+      while (seen.size < MAX_PAGES && attempts < MAX_PAGES * 4) {
+        attempts++;
+        const page = Math.floor(Math.random() * totalPages);
+        if (seen.has(page)) continue;
+        seen.add(page);
+
+        const data = await fetchPage(page);
+        if (!data?.items?.length) continue;
+        all = all.concat(data.items);
+      }
+    }
   }
 
   if (!all.length) {

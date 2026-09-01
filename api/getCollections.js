@@ -9,8 +9,14 @@ export default async function handler(req, res) {
 
   try {
     // Fetch both user collections and system stats in parallel
-    const [collectionsResp, statsResp] = await Promise.all([
+    // /collections returns root collections only. Nested ones live behind
+    // /collections/childrens, so without it any bookmark filed in a sub-collection
+    // was missing from the picker entirely.
+    const [collectionsResp, childrenResp, statsResp] = await Promise.all([
       fetch("https://api.raindrop.io/rest/v1/collections", {
+        headers: { Authorization: `Bearer ${token}` }
+      }),
+      fetch("https://api.raindrop.io/rest/v1/collections/childrens", {
         headers: { Authorization: `Bearer ${token}` }
       }),
       fetch("https://api.raindrop.io/rest/v1/user/stats", {
@@ -32,7 +38,12 @@ export default async function handler(req, res) {
     }
 
     const collectionsData = await collectionsResp.json();
+    const childrenData = childrenResp.ok ? await childrenResp.json() : null;
     const statsData = statsResp.ok ? await statsResp.json() : null;
+
+    if (!childrenResp.ok) {
+      console.warn(`Child collections API error: ${childrenResp.status} - continuing with root collections only`);
+    }
 
     // Debug logging
     if (collectionsData.items && collectionsData.items.length > 0) {
@@ -53,12 +64,24 @@ export default async function handler(req, res) {
       });
     }
 
-    // Process user collections
-    const collections = collectionsData.items.map(c => ({
-      id: c._id,
-      title: c.title,
-      count: c.count ?? statsMap.get(c._id) ?? 0
-    }));
+    // Process user collections, root and nested alike. Child titles are
+    // prefixed so two sub-collections sharing a name stay distinguishable.
+    const rootTitles = new Map(collectionsData.items.map(c => [c._id, c.title]));
+
+    const toEntry = (c, isChild) => {
+      const parentId = c.parent?.$id ?? c.parent?._id;
+      const parentTitle = isChild && parentId != null ? rootTitles.get(parentId) : null;
+      return {
+        id: c._id,
+        title: parentTitle ? `${parentTitle} / ${c.title}` : c.title,
+        count: c.count ?? statsMap.get(c._id) ?? 0
+      };
+    };
+
+    const collections = [
+      ...collectionsData.items.map(c => toEntry(c, false)),
+      ...(childrenData?.items || []).map(c => toEntry(c, true))
+    ];
 
     return res.status(200).json(collections);
     
