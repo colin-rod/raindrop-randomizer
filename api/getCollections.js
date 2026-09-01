@@ -1,5 +1,48 @@
 import fetch from "node-fetch";
 
+/**
+ * Combine root and nested collections into one list.
+ *
+ * /collections and /collections/childrens can return the SAME collection.
+ * Concatenating them blindly listed every collection twice in the picker and
+ * doubled the "All Collections" total, which the UI computes by summing these
+ * counts. Deduplicate by id, first writer wins, so a collection appears once
+ * whichever endpoint reported it.
+ *
+ * Exported so the dedup can be tested without standing up the HTTP handler.
+ */
+export function mergeCollections(rootItems, childItems, statsMap = new Map()) {
+  const root = Array.isArray(rootItems) ? rootItems : [];
+  const children = Array.isArray(childItems) ? childItems : [];
+
+  // Guard here too, not just in add() below: this map is built first, so a
+  // malformed entry would throw before the per-item check ever ran.
+  const rootTitles = new Map(
+    root.filter(c => c?._id != null).map(c => [c._id, c.title])
+  );
+  const byId = new Map();
+
+  const add = (c, isChild) => {
+    if (c?._id == null || byId.has(c._id)) return;
+
+    // Only prefix a genuine child whose parent we can actually name; an
+    // unresolvable parent would otherwise produce a bare duplicate title.
+    const parentId = c.parent?.$id ?? c.parent?._id;
+    const parentTitle = isChild && parentId != null ? rootTitles.get(parentId) : null;
+
+    byId.set(c._id, {
+      id: c._id,
+      title: parentTitle ? `${parentTitle} / ${c.title}` : c.title,
+      count: c.count ?? statsMap.get(c._id) ?? 0
+    });
+  };
+
+  root.forEach(c => add(c, false));
+  children.forEach(c => add(c, true));
+
+  return [...byId.values()];
+}
+
 export default async function handler(req, res) {
   const token = process.env.RAINDROP_TOKEN;
   
@@ -64,24 +107,11 @@ export default async function handler(req, res) {
       });
     }
 
-    // Process user collections, root and nested alike. Child titles are
-    // prefixed so two sub-collections sharing a name stay distinguishable.
-    const rootTitles = new Map(collectionsData.items.map(c => [c._id, c.title]));
-
-    const toEntry = (c, isChild) => {
-      const parentId = c.parent?.$id ?? c.parent?._id;
-      const parentTitle = isChild && parentId != null ? rootTitles.get(parentId) : null;
-      return {
-        id: c._id,
-        title: parentTitle ? `${parentTitle} / ${c.title}` : c.title,
-        count: c.count ?? statsMap.get(c._id) ?? 0
-      };
-    };
-
-    const collections = [
-      ...collectionsData.items.map(c => toEntry(c, false)),
-      ...(childrenData?.items || []).map(c => toEntry(c, true))
-    ];
+    const collections = mergeCollections(
+      collectionsData.items,
+      childrenData?.items,
+      statsMap
+    );
 
     return res.status(200).json(collections);
     
