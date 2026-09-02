@@ -1527,15 +1527,51 @@
       });
     }
 
+    // The collection dropdown showed the SUM of per-collection counts while the
+    // content and date filters showed the API's own total for collection 0.
+    // Those answer different questions -- the sum omits anything not in a listed
+    // collection, Unsorted included -- so the two disagreed on screen (2306
+    // against 2322). The API total is authoritative; the sum is only a fallback
+    // for before the first stats call lands.
+    let authoritativeTotal = null;
+
+    function collectionsTotal() {
+      if (Number.isFinite(authoritativeTotal)) return authoritativeTotal;
+      if (!Array.isArray(collectionsCache)) return 0;
+      return collectionsCache.reduce((sum, collection) => {
+        const value = Number(collection.count);
+        return sum + (Number.isFinite(value) ? value : 0);
+      }, 0);
+    }
+
+    function renderCollectionsTotal() {
+      const select = document.getElementById("collections");
+      if (!select) return;
+      const option = select.querySelector('option[value="0"]') || select.children[0];
+      if (option) option.textContent = `All Collections (${formatCount(collectionsTotal())})`;
+    }
+
     function applyFilterCounts(stats) {
+      // Stats for collection 0 carry the real library size; keep the dropdown
+      // header in step with it so the two can never drift apart again.
+      if (stats && String(selectedCollection ?? '0') === '0' && Number.isFinite(Number(stats.totalItems))) {
+        authoritativeTotal = Number(stats.totalItems);
+        renderCollectionsTotal();
+      }
+
       const contentCheckboxes = Array.from(document.querySelectorAll('#contentFilter input[type="checkbox"]'));
       const dateSelect = document.getElementById("dateFilter");
       const hasStats = stats && typeof stats === 'object';
 
+      // A count the API could not give us arrives as null. Show the bare label
+      // rather than a number we would be inventing.
+      const labelWith = (defaultLabel, value) =>
+        value === null || value === undefined ? defaultLabel : `${defaultLabel} (${formatCount(value)})`;
+
       if (contentCheckboxes.length > 0) {
-        const totalItems = hasStats ? formatCount(stats.totalItems) : null;
-        const videoItems = hasStats ? formatCount(stats.videoItems) : null;
-        const unsortedItems = hasStats ? formatCount(stats.unsortedItems) : null;
+        const totalItems = hasStats ? stats.totalItems : null;
+        const videoItems = hasStats ? stats.videoItems : null;
+        const unsortedItems = hasStats ? stats.unsortedItems : null;
 
         contentCheckboxes.forEach(checkbox => {
           const value = checkbox.value;
@@ -1549,11 +1585,11 @@
           }
 
           if (value === 'all') {
-            labelSpan.textContent = `${defaultLabel} (${totalItems})`;
+            labelSpan.textContent = labelWith(defaultLabel, totalItems);
           } else if (value === 'video') {
-            labelSpan.textContent = `${defaultLabel} (${videoItems})`;
+            labelSpan.textContent = labelWith(defaultLabel, videoItems);
           } else if (value === 'unsorted') {
-            labelSpan.textContent = `${defaultLabel} (${unsortedItems})`;
+            labelSpan.textContent = labelWith(defaultLabel, unsortedItems);
           } else {
             labelSpan.textContent = defaultLabel;
           }
@@ -1561,9 +1597,9 @@
       }
 
       if (dateSelect) {
-        const totalItems = hasStats ? formatCount(stats.totalItems) : null;
-        const last7Days = hasStats ? formatCount(stats.last7Days) : null;
-        const last30Days = hasStats ? formatCount(stats.last30Days) : null;
+        const totalItems = hasStats ? stats.totalItems : null;
+        const last7Days = hasStats ? stats.last7Days : null;
+        const last30Days = hasStats ? stats.last30Days : null;
 
         Array.from(dateSelect.options).forEach(option => {
           const defaultLabel = option.dataset.defaultLabel || defaultDateFilterLabels[option.value];
@@ -1575,15 +1611,37 @@
           }
 
           if (option.value === 'any') {
-            option.textContent = `${defaultLabel} (${totalItems})`;
+            option.textContent = labelWith(defaultLabel, totalItems);
           } else if (option.value === 'last7') {
-            option.textContent = `${defaultLabel} (${last7Days})`;
+            option.textContent = labelWith(defaultLabel, last7Days);
           } else if (option.value === 'last30') {
-            option.textContent = `${defaultLabel} (${last30Days})`;
+            option.textContent = labelWith(defaultLabel, last30Days);
           } else {
             option.textContent = defaultLabel;
           }
         });
+      }
+    }
+
+    // Invalidate the cached stats touched by a delete and refetch them. Counts
+    // now cost one perpage=1 request each, so this is cheap enough to do on
+    // every delete rather than letting local decrements accumulate error.
+    async function resyncFilterCounts(bookmark, activeCollectionId) {
+      const affected = new Set(['0', String(activeCollectionId ?? '0')]);
+      const bookmarkCollection = bookmark && resolveBookmarkCollectionId(bookmark);
+      if (bookmarkCollection != null) affected.add(String(bookmarkCollection));
+
+      affected.forEach(key => filterStatsCache.delete(key));
+
+      try {
+        const stats = await updateFilterCounts(activeCollectionId);
+        if (stats && String(activeCollectionId ?? '0') === '0' && Number.isFinite(Number(stats.totalItems))) {
+          authoritativeTotal = Number(stats.totalItems);
+          renderCollectionsTotal();
+        }
+      } catch (error) {
+        // Keep the optimistic decrement; it re-syncs on the next stats fetch.
+        console.warn('Could not re-sync filter counts after delete:', error);
       }
     }
 
@@ -1789,11 +1847,23 @@
     }
 
     // Cache collections
-    function saveCollectionsCache(collections) {
+    // refreshCollectionCounts writes this cache after every delete. Stamping it
+    // with Date.now() each time meant the one-hour TTL never expired while the
+    // user kept deleting, so locally-decremented counts drifted from the server
+    // indefinitely. Preserve the original stamp when we are only adjusting
+    // counts, so the cache still expires and re-syncs on schedule.
+    function saveCollectionsCache(collections, { preserveTimestamp = false } = {}) {
       try {
+        let timestamp = Date.now();
+        if (preserveTimestamp) {
+          try {
+            const existing = JSON.parse(localStorage.getItem('raindrop_collections') || 'null');
+            if (existing && Number.isFinite(existing.timestamp)) timestamp = existing.timestamp;
+          } catch (e) { /* fall back to now */ }
+        }
         localStorage.setItem('raindrop_collections', JSON.stringify({
           data: collections,
-          timestamp: Date.now()
+          timestamp
         }));
       } catch (e) {
         console.warn('Failed to cache collections:', e);
@@ -1810,15 +1880,7 @@
         return;
       }
 
-      const totalCount = collectionsCache.reduce((sum, collection) => {
-        const value = Number(collection.count);
-        return sum + (Number.isFinite(value) ? value : 0);
-      }, 0);
-
-      const allCollectionsOption = collectionsSelect.querySelector('option[value="0"]') || collectionsSelect.children[0];
-      if (allCollectionsOption) {
-        allCollectionsOption.textContent = `All Collections (${totalCount})`;
-      }
+      renderCollectionsTotal();
 
       collectionsCache.forEach(collection => {
         const option = collectionsSelect.querySelector(`option[value="${String(collection.id)}"]`);
@@ -1828,7 +1890,7 @@
       });
 
       populateEditCollectionsSelect(collectionsCache);
-      saveCollectionsCache(collectionsCache);
+      saveCollectionsCache(collectionsCache, { preserveTimestamp: true });
     }
 
     function applyBookmarkRemovalToCache(bookmark) {
@@ -1851,6 +1913,16 @@
 
       const currentCount = Number(target.count) || 0;
       target.count = Math.max(0, currentCount - 1);
+    }
+
+    // Deleting a bookmark always reduces the library by one, whether or not it
+    // belonged to a collection the dropdown lists. Unsorted bookmarks match no
+    // entry above, which is how the header total and the filter total drifted
+    // apart in the first place.
+    function applyBookmarkRemovalToTotal() {
+      if (Number.isFinite(authoritativeTotal)) {
+        authoritativeTotal = Math.max(0, authoritativeTotal - 1);
+      }
     }
 
     function sanitizeCount(value) {
@@ -1991,12 +2063,7 @@
       function populateCollections(collections) {
         const sel = document.getElementById("collections");
 
-        // Calculate total count for "All Collections"
-        const totalCount = collections.reduce((sum, c) => sum + (c.count || 0), 0);
-
-        // Update "All Collections" option with total count
-        const allCollectionsOption = sel.children[0];
-        allCollectionsOption.textContent = `All Collections (${totalCount})`;
+        renderCollectionsTotal();
 
         // Clear existing options except "All Collections"
         while (sel.children.length > 1) {
@@ -2479,11 +2546,18 @@
           const data = await res.json();
           if (data.success) {
             showSuccess("✅ Bookmark deleted! Loading new random bookmark...");
-            applyBookmarkRemovalToCache(current);
+            const deleted = current;
+            applyBookmarkRemovalToCache(deleted);
+            applyBookmarkRemovalToTotal();
             refreshCollectionCounts();
-            applyBookmarkRemovalToFilterStats(current);
+            applyBookmarkRemovalToFilterStats(deleted);
             const activeCollectionId = selectedCollection != null ? selectedCollection : '0';
             updateFilterCounts(activeCollectionId);
+
+            // The decrements above are an instant estimate. Drop the cached
+            // stats and refetch so the counts settle on the server's own
+            // figures instead of accumulating local drift.
+            resyncFilterCounts(deleted, activeCollectionId);
             current = null;
             if (editBtn) {
               editBtn.disabled = true;

@@ -1,11 +1,66 @@
 import fetch from "node-fetch";
 
-function buildEndpoint(collectionId, page, perpage) {
-  const base = "https://api.raindrop.io/rest/v1/raindrops";
-  if (collectionId === "0") {
-    return `${base}/0?perpage=${perpage}&page=${page}`;
+const BASE = "https://api.raindrop.io/rest/v1/raindrops";
+
+/**
+ * Every filtered raindrops query returns the total number of matches in its
+ * `count` field, so an exact figure costs one request with perpage=1 — no
+ * pagination, and nothing derived from a sample.
+ *
+ * This replaces scanning the newest 600 bookmarks and scaling the result up to
+ * the library size. That produced numbers that looked precise and were not:
+ * the scan is ordered by creation date, so the sample was the most recent
+ * bookmarks, and scaling "how many were created in the last 7 days" from the
+ * 600 newest overstates it enormously.
+ */
+export function buildStatQueries(collectionId, now = new Date()) {
+  const id = String(collectionId ?? "0");
+  const isAll = id === "0";
+
+  const dayStamp = daysAgo => {
+    const d = new Date(now.getTime() - daysAgo * 24 * 60 * 60 * 1000);
+    return d.toISOString().slice(0, 10); // YYYY-MM-DD
+  };
+
+  return {
+    totalItems: { collection: id },
+    videoItems: { collection: id, search: "type:video" },
+    // "Unsorted" is collection -1. Within any real collection nothing is
+    // unsorted, so there is nothing to ask.
+    unsortedItems: isAll ? { collection: "-1" } : null,
+    last7Days: { collection: id, search: `created:>${dayStamp(7)}` },
+    last30Days: { collection: id, search: `created:>${dayStamp(30)}` },
+  };
+}
+
+export function statUrl({ collection, search }) {
+  const params = new URLSearchParams({ perpage: "1", page: "0" });
+  if (search) params.set("search", search);
+  return `${BASE}/${collection}?${params}`;
+}
+
+/**
+ * A count we could not obtain is null, never a guess. The UI omits the number
+ * entirely rather than showing one that might be wrong.
+ */
+export function assembleStats(results) {
+  const out = {};
+  let anyExact = false;
+
+  for (const [key, value] of Object.entries(results)) {
+    // Check for absence before coercing: Number(null) is 0, which would turn a
+    // failed request into a confident count of zero.
+    if (value === null || value === undefined || value === '') {
+      out[key] = null;
+      continue;
+    }
+    const n = Number(value);
+    out[key] = Number.isFinite(n) && n >= 0 ? n : null;
+    if (out[key] !== null) anyExact = true;
   }
-  return `${base}/${collectionId}?perpage=${perpage}&page=${page}`;
+
+  out.exact = anyExact;
+  return out;
 }
 
 export default async function handler(req, res) {
@@ -20,97 +75,39 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: "Missing collectionId" });
   }
 
-  const normalizedCollectionId = String(collectionId);
+  const queries = buildStatQueries(collectionId);
 
-  try {
-    // Raindrop documents 50 as the maximum page size.
-    const perpage = 50;
-
-    // This used to stop at `page > 10`, so with more than ~1,100 bookmarks the
-    // panel silently reported a truncated total as if it were the real one.
-    // The API returns the true count on every response, so the headline figure
-    // no longer depends on how much we managed to page through.
-    const MAX_PAGES = 12;
-
-    const fetchPage = async (page) => {
-      const resp = await fetch(buildEndpoint(normalizedCollectionId, page, perpage), {
+  const countFor = async query => {
+    if (!query) return 0;
+    try {
+      const resp = await fetch(statUrl(query), {
         headers: { Authorization: `Bearer ${token}` }
       });
-      if (!resp.ok) return null;
-      return resp.json();
-    };
+      if (!resp.ok) {
+        console.warn(`Filter stats: ${resp.status} for ${query.search || "total"}`);
+        return null;
+      }
+      const data = await resp.json();
+      return Number.isFinite(Number(data.count)) ? Number(data.count) : null;
+    } catch (error) {
+      console.warn(`Filter stats failed for ${query.search || "total"}:`, error.message);
+      return null;
+    }
+  };
 
-    const head = await fetchPage(0);
-    if (!head) {
+  try {
+    const entries = Object.entries(queries);
+    const counts = await Promise.all(entries.map(([, query]) => countFor(query)));
+    const stats = assembleStats(Object.fromEntries(
+      entries.map(([key], i) => [key, counts[i]])
+    ));
+
+    if (stats.totalItems === null) {
       return res.status(500).json({ error: "Failed to fetch bookmarks from collection" });
     }
 
-    const reportedTotal = Number(head.count) || 0;
-    const totalPages = Math.max(1, Math.ceil(reportedTotal / perpage));
-    let items = head.items || [];
-
-    const scannedPages = Math.min(totalPages, MAX_PAGES);
-    for (let page = 1; page < scannedPages; page++) {
-      const data = await fetchPage(page);
-      if (!Array.isArray(data?.items) || data.items.length === 0) break;
-      items = items.concat(data.items);
-    }
-
-    // The breakdown counts (videos, recent, unsorted) are derived from what we
-    // actually read. When that is a sample rather than the whole collection we
-    // scale them up and say so, instead of passing a partial count off as
-    // complete.
-    const sampled = items.length;
-    const isSample = reportedTotal > sampled;
-    const scale = isSample && sampled > 0 ? reportedTotal / sampled : 1;
-
-    const now = Date.now();
-    const sevenDaysAgo = now - 7 * 24 * 60 * 60 * 1000;
-    const thirtyDaysAgo = now - 30 * 24 * 60 * 60 * 1000;
-
-    const totals = items.reduce((acc, item) => {
-      acc.totalItems += 1;
-
-      if ((item.type || "").toLowerCase() === "video") {
-        acc.videoItems += 1;
-      }
-
-      const collectionId = item.collection?.$id ?? item.collection?._id ?? item.collectionId;
-      if (Number(collectionId) === -1) {
-        acc.unsortedItems += 1;
-      }
-
-      const created = new Date(item.created);
-      if (!Number.isNaN(created.getTime())) {
-        const timestamp = created.getTime();
-        if (timestamp >= sevenDaysAgo) {
-          acc.last7Days += 1;
-        }
-        if (timestamp >= thirtyDaysAgo) {
-          acc.last30Days += 1;
-        }
-      }
-
-      return acc;
-    }, {
-      totalItems: 0,
-      videoItems: 0,
-      unsortedItems: 0,
-      last7Days: 0,
-      last30Days: 0
-    });
-
-    const scaled = value => (isSample ? Math.round(value * scale) : value);
-
-    return res.status(200).json({
-      totalItems: reportedTotal || totals.totalItems,
-      videoItems: scaled(totals.videoItems),
-      unsortedItems: scaled(totals.unsortedItems),
-      last7Days: scaled(totals.last7Days),
-      last30Days: scaled(totals.last30Days),
-      sampled: isSample ? sampled : undefined,
-      estimated: isSample || undefined
-    });
+    res.setHeader("Cache-Control", "no-store");
+    return res.status(200).json(stats);
   } catch (error) {
     console.error("Failed to compute filter stats", error);
     return res.status(500).json({ error: "Failed to compute filter stats" });
